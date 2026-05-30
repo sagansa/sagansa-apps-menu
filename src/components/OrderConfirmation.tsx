@@ -8,6 +8,8 @@ interface OrderConfirmationProps {
 }
 
 export function OrderConfirmation({ order, onNewOrder }: OrderConfirmationProps) {
+  const formatCurrency = (value: number) => `Rp ${value.toLocaleString('id-ID')}`;
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md overflow-hidden">
@@ -37,7 +39,7 @@ export function OrderConfirmation({ order, onNewOrder }: OrderConfirmationProps)
                 <div>
                   <p className="font-medium">{item.productName}</p>
                   {item.variantName && (
-                    <p className="text-sm text-gray-600">Variant: {item.variantName}</p>
+                    <p className="text-sm text-gray-600">{item.variantName}</p>
                   )}
                   {item.modifications.length > 0 && (
                     <div className="text-sm text-gray-600 mt-1">
@@ -48,7 +50,7 @@ export function OrderConfirmation({ order, onNewOrder }: OrderConfirmationProps)
                   )}
                   <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                 </div>
-                <p className="font-medium">Rp {item.totalPrice.toLocaleString()}</p>
+                <p className="font-medium">{formatCurrency(item.totalPrice)}</p>
               </div>
             ))}
           </div>
@@ -56,15 +58,17 @@ export function OrderConfirmation({ order, onNewOrder }: OrderConfirmationProps)
           <div className="border-t border-gray-200 pt-4 mt-4 space-y-2">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>Rp {order.subtotal.toLocaleString()}</span>
+              <span>{formatCurrency(order.subtotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Tax (10%)</span>
-              <span>Rp {order.taxTotal.toLocaleString()}</span>
-            </div>
+            {order.taxTotal > 0 && (
+              <div className="flex justify-between">
+                <span>Pajak</span>
+                <span>{formatCurrency(order.taxTotal)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-semibold text-lg pt-2">
               <span>Total</span>
-              <span>Rp {order.grandTotal.toLocaleString()}</span>
+              <span>{formatCurrency(order.grandTotal)}</span>
             </div>
           </div>
 

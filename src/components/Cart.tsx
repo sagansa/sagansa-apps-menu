@@ -11,6 +11,7 @@ interface CartProps {
 
 export const Cart = ({ items, onUpdateQuantity, onRemoveItem, onCheckout, total }: CartProps) => {
   const [showFullCart, setShowFullCart] = useState(true);
+  const formatCurrency = (value: number) => `Rp ${value.toLocaleString('id-ID')}`;
 
   if (items.length === 0) {
     return (
@@ -52,21 +53,30 @@ export const Cart = ({ items, onUpdateQuantity, onRemoveItem, onCheckout, total 
               <div className="flex justify-between">
                 <div>
                   <h3 className="font-medium">{item.productName}</h3>
+                  <div className="mt-1 text-xs text-gray-500">
+                    <div className="flex justify-between gap-3">
+                      <span>Harga item</span>
+                      <span>{formatCurrency(item.basePrice ?? item.unitPrice)}</span>
+                    </div>
+                  </div>
                   {item.variantName && (
-                    <p className="text-sm text-gray-600">Variant: {item.variantName}</p>
+                    <p className="text-sm text-gray-600">
+                      {item.variantName}
+                      {(item.variantPriceAdjustment ?? 0) > 0 && ` (+${formatCurrency(item.variantPriceAdjustment ?? 0)})`}
+                    </p>
                   )}
                   {item.modifications.length > 0 && (
                     <div className="text-xs text-gray-500 mt-1">
                       {item.modifications.map(mod => (
                         <div key={mod.id}>
-                          + {mod.quantity}x {mod.name} (Rp {mod.price * mod.quantity})
+                          + {mod.quantity}x {mod.name} ({formatCurrency(mod.price * mod.quantity)})
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">Rp {item.totalPrice.toLocaleString()}</p>
+                  <p className="font-medium">{formatCurrency(item.totalPrice)}</p>
                   <div className="flex items-center mt-1">
                     <button 
                       onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
@@ -106,15 +116,11 @@ export const Cart = ({ items, onUpdateQuantity, onRemoveItem, onCheckout, total 
       <div className="mt-auto pt-4 border-t">
         <div className="flex justify-between mb-2">
           <span>Subtotal:</span>
-          <span>Rp {total.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between mb-2">
-          <span>Tax (10%):</span>
-          <span>Rp {(total * 0.1).toLocaleString()}</span>
+          <span>{formatCurrency(total)}</span>
         </div>
         <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t">
           <span>Total:</span>
-          <span>Rp {(total * 1.1).toLocaleString()}</span>
+          <span>{formatCurrency(total)}</span>
         </div>
         <button
           onClick={onCheckout}

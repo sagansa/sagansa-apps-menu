@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { CartItem } from '@/types';
+import { CartItem, TenantStoreInfo } from '@/types';
 import { submitOrder } from '@/lib/api';
-
-import { TenantStoreInfo } from '@/types';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -15,7 +13,7 @@ interface CheckoutModalProps {
   onSubmit: (customerInfo: { name: string; email?: string; phone?: string; specialRequests?: string }) => void;
 }
 
-export const CheckoutModal = ({ isOpen, onClose, cart, total, onSubmit }: CheckoutModalProps) => {
+export const CheckoutModal = ({ isOpen, onClose, cart, total, tenantStoreInfo, onSubmit }: CheckoutModalProps) => {
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -43,19 +41,28 @@ export const CheckoutModal = ({ isOpen, onClose, cart, total, onSubmit }: Checko
     try {
       // Prepare order data
       const orderData = {
+        tenant_id: tenantStoreInfo.id,
         store_id: tenantStoreInfo.store.id,
         table_code: tenantStoreInfo.store.tableCode,
         customer_name: customerInfo.name,
-        source: 'web-order',
+        customer_email: customerInfo.email || null,
+        customer_phone: customerInfo.phone || null,
+        subtotal: total,
+        discount_total: 0,
+        tax_total: 0,
+        service_total: 0,
+        grand_total: total,
         order_items: cart.map(item => ({
           product_id: item.productId,
-          product_variant_id: item.variantId,
+          product_variant_id: item.variantId ?? null,
           name_snapshot: item.productName, // Snapshot for historical record
           quantity: item.quantity,
           unit_price: item.unitPrice,
           total_price: item.totalPrice,
+          notes: customerInfo.specialRequests || null,
           modifications: item.modifications.map(mod => ({
             product_modification_id: mod.id,
+            price: mod.price,
             quantity: mod.quantity
           })).filter(mod => mod.quantity > 0) // Only include modifications with quantity > 0
         }))
@@ -69,7 +76,6 @@ export const CheckoutModal = ({ isOpen, onClose, cart, total, onSubmit }: Checko
       console.error('Error submitting order:', error);
       // Handle error appropriately (e.g., show user-friendly error message)
     }
-  };
   };
 
   return (

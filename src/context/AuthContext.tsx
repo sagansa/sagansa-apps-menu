@@ -2,7 +2,6 @@
 
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert } from 'react-native';
 
 import apiService from '@/lib/api';
 import { clearToken, loadToken, saveToken } from '@/lib/storage';
@@ -13,6 +12,7 @@ interface AuthContextValue {
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (data: { name: string; email: string; password: string; password_confirmation: string; tenant_name: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -68,9 +68,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(profile);
         } catch (error) {
           console.error('Login failed', error);
-          Alert.alert('Login Gagal', 'Email atau password salah. Silakan coba lagi.');
           throw error;
         }
+      },
+    [],
+  );
+
+  const register = useMemo(
+    () =>
+      async (data: { name: string; email: string; password: string; password_confirmation: string; tenant_name: string }) => {
+        const { token: newToken, user: profile } = await apiService.register(data);
+        await saveToken(newToken);
+        apiService.setToken(newToken);
+        setToken(newToken);
+        setUser(profile);
       },
     [],
   );
@@ -102,9 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAuthenticated: Boolean(token),
       login,
+      register,
       logout,
     }),
-    [user, token, loading, login, logout],
+    [user, token, loading, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

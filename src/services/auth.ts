@@ -61,7 +61,7 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 }
 
 export async function logout(): Promise<void> {
-  return apiService.logout();
+  await apiService.logout();
 }
 
 export async function fetchProfile(): Promise<{ user: User }> {

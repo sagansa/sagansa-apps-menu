@@ -36,12 +36,24 @@ export interface ProductModification {
   maxQuantity?: number;
 }
 
+export interface PublicPaymentMethod {
+  id: string;
+  store_id: string;
+  type: string;
+  name: string;
+  is_active?: boolean;
+  require_proof?: boolean;
+  details?: Record<string, unknown> | null;
+}
+
 export interface CartItem {
   id: string;
   productId: string;
   productName: string;
   variantId?: string;
   variantName?: string;
+  basePrice?: number;
+  variantPriceAdjustment?: number;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

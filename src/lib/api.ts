@@ -1,4 +1,4 @@
-// API service for web-order-next to communicate with api-mobile
+// API service for apps/menu to communicate with services/api-mobile.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api';
 
 export class ApiError extends Error {
@@ -56,8 +56,8 @@ class ApiService {
       }
 
       if (!response.ok) {
-        const message = extractErrorMessage(data) ?? `HTTP error! status: ${response.status}`;
-        const errors = extractValidationErrors(data);
+        const message = this.extractErrorMessage(data) ?? `HTTP error! status: ${response.status}`;
+        const errors = this.extractValidationErrors(data);
         throw new ApiError(message, response.status, errors);
       }
 
@@ -69,7 +69,7 @@ class ApiService {
   }
 
   private extractErrorMessage(body: unknown): string | null {
-    if (isRecord(body) && typeof body.message === 'string') {
+    if (this.isRecord(body) && typeof body.message === 'string') {
       return body.message;
     }
 
@@ -85,16 +85,16 @@ class ApiService {
   }
 
   private extractValidationErrors(body: unknown): Record<string, string[]> | undefined {
-    if (!isRecord(body) || !('errors' in body)) {
+    if (!this.isRecord(body) || !('errors' in body)) {
       return undefined;
     }
 
     const potentialErrors = (body as Record<string, unknown>).errors;
-    return isRecordOfStringArray(potentialErrors) ? potentialErrors : undefined;
+    return this.isRecordOfStringArray(potentialErrors) ? potentialErrors : undefined;
   }
 
   private isRecordOfStringArray(value: unknown): value is Record<string, string[]> {
-    if (!isRecord(value)) {
+    if (!this.isRecord(value)) {
       return false;
     }
 
@@ -174,7 +174,9 @@ class ApiService {
 
   // Order endpoints
   async createOrder(orderData: any) {
-    const response = await this.request('/orders', {
+    const endpoint = this.token ? '/orders' : '/guest/orders';
+
+    const response = await this.request(endpoint, {
       method: 'POST',
       body: JSON.stringify(orderData),
     });
@@ -223,8 +225,52 @@ class ApiService {
   async getPublicProducts(storeId: string) {
     return this.request<{ success: boolean; data: any[] }>(`/public/products?store_id=${storeId}`);
   }
+
+  async getPublicPaymentMethods(storeId: string) {
+    return this.request<{ success: boolean; data: any[] }>(`/public/payment-methods?store_id=${storeId}`);
+  }
+
+  async getPublicPaymentMethodQris(paymentMethodId: string, amount: number) {
+    const url = `${API_BASE_URL}/public/payment-methods/${paymentMethodId}/qris?amount=${encodeURIComponent(amount)}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'image/svg+xml',
+      },
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      let message = text || `HTTP error! status: ${response.status}`;
+      try {
+        const body = JSON.parse(text);
+        if (body?.message) {
+          message = body.message;
+        }
+      } catch {
+      }
+
+      throw new ApiError(message, response.status);
+    }
+
+    return text;
+  }
+
+  async getGuestOrderHistory(params: { phone: string; storeId?: string }) {
+    const searchParams = new URLSearchParams({ phone: params.phone });
+    if (params.storeId) {
+      searchParams.set('store_id', params.storeId);
+    }
+
+    return this.request<{ success: boolean; data: any[] }>(`/guest/orders?${searchParams.toString()}`);
+  }
 }
 
 const apiService = new ApiService();
+
+export function submitOrder(orderData: any) {
+  return apiService.createOrder(orderData);
+}
 
 export default apiService;

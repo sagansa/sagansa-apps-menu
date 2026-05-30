@@ -1,23 +1,114 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Product, CartItem, TenantStoreInfo } from '@/types';
+import { Product, CartItem, PublicPaymentMethod, TenantStoreInfo } from '@/types';
 import { ProductCard } from '@/components/ProductCard';
 import { CartSidebar } from '@/components/CartSidebar';
 import apiService from '@/lib/api';
-import { Share2, Check, Copy } from 'lucide-react';
+import {
+  loadCustomerProfile,
+  loadLocalOrderHistory,
+  LocalOrderHistoryItem,
+  normalizePhone,
+} from '@/lib/orderHistory';
+import { Share2, Check, Copy, ShoppingCart, UserRound } from 'lucide-react';
 
 interface MenuPageProps {
   tenantStoreInfo: TenantStoreInfo;
 }
 
+function toNumber(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizePublicProduct(product: any): Product {
+  const basePrice = toNumber(product.price);
+  const variantsFromGroups = Array.isArray(product.variant_groups)
+    ? product.variant_groups.flatMap((group: any) =>
+        Array.isArray(group.variants)
+          ? group.variants
+              .filter((variant: any) => variant.is_active !== false)
+              .map((variant: any) => {
+                const priceAdjustment = toNumber(variant.price);
+                return {
+                  id: String(variant.id),
+                  name: group.name ? `${group.name}: ${variant.name}` : String(variant.name),
+                  price: basePrice + priceAdjustment,
+                  isAvailable: variant.isAvailable ?? variant.is_active !== false,
+                };
+              })
+          : [],
+      )
+    : [];
+
+  const directVariants = Array.isArray(product.variants)
+    ? product.variants.map((variant: any) => ({
+        id: String(variant.id),
+        name: String(variant.name),
+        price: toNumber(variant.price, basePrice),
+        isAvailable: variant.isAvailable ?? variant.is_active !== false,
+      }))
+    : [];
+
+  return {
+    id: String(product.id),
+    name: String(product.name),
+    description: product.description || undefined,
+    price: basePrice,
+    image: product.image || undefined,
+    category: typeof product.category === 'string'
+      ? product.category
+      : product.category_detail?.name,
+    isAvailable: product.isAvailable ?? (
+      product.is_active !== false &&
+      (product.stock === null || product.stock === undefined || toNumber(product.stock) > 0)
+    ),
+    variants: variantsFromGroups.length > 0 ? variantsFromGroups : directVariants,
+    modifications: Array.isArray(product.modifications)
+      ? product.modifications
+          .filter((modification: any) => modification.is_active !== false)
+          .map((modification: any) => ({
+            id: String(modification.id),
+            name: String(modification.name),
+            price: toNumber(modification.price),
+            isAvailable: modification.isAvailable ?? modification.is_active !== false,
+            maxQuantity: modification.max_quantity,
+          }))
+      : [],
+  };
+}
+
+function normalizePublicPaymentMethods(methods: unknown): PublicPaymentMethod[] {
+  if (!Array.isArray(methods)) {
+    return [];
+  }
+
+  return methods.filter((method): method is PublicPaymentMethod => {
+    if (!method || typeof method !== 'object') {
+      return false;
+    }
+
+    const paymentMethod = method as PublicPaymentMethod;
+    return Boolean(paymentMethod.id && paymentMethod.name) && paymentMethod.is_active !== false;
+  });
+}
+
 export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethod[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyPhone, setHistoryPhone] = useState('');
+  const [localHistory, setLocalHistory] = useState<LocalOrderHistoryItem[]>([]);
+  const [serverHistory, setServerHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any | LocalOrderHistoryItem | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Fetch real products data
@@ -27,9 +118,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
       try {
         const response = await apiService.getPublicProducts(tenantStoreInfo.store.id);
         if (response.success) {
-          // Map backend product structure to frontend Product interface if needed
-          // For now assuming they are similar or compatible
-          setProducts(response.data);
+          setProducts(response.data.map(normalizePublicProduct));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products');
@@ -41,6 +130,45 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
 
     fetchProducts();
   }, [tenantStoreInfo.store.id]);
+
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const response = await apiService.getPublicPaymentMethods(tenantStoreInfo.store.id);
+        if (response.success) {
+          setPaymentMethods(normalizePublicPaymentMethods(response.data));
+        }
+      } catch (err) {
+        console.error('Error fetching payment methods:', err);
+        setPaymentMethods([]);
+      }
+    };
+
+    fetchPaymentMethods();
+  }, [tenantStoreInfo.store.id]);
+
+  useEffect(() => {
+    const profile = loadCustomerProfile();
+    setHistoryPhone(profile.phoneNumber);
+    setLocalHistory(loadLocalOrderHistory(profile.phoneNumber));
+
+    const refreshLocalHistory = () => {
+      const currentPhone = loadCustomerProfile().phoneNumber;
+      setHistoryPhone(currentPhone);
+      setLocalHistory(loadLocalOrderHistory(currentPhone));
+    };
+
+    window.addEventListener('sagansa-menu-order-history-updated', refreshLocalHistory);
+    return () => window.removeEventListener('sagansa-menu-order-history-updated', refreshLocalHistory);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#profile') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      openHistory();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addToCart = (product: Product, variantId?: string, modifications: { id: string; quantity: number }[] = []) => {
     setCart(prevCart => {
@@ -68,7 +196,8 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
       } else {
         // Add new item to cart
         const variant = variantId ? product.variants?.find(v => v.id === variantId) : undefined;
-        const unitPrice = variant ? variant.price : product.price;
+        const basePrice = product.price;
+        const variantPriceAdjustment = variant ? Math.max(variant.price - basePrice, 0) : 0;
         const modificationDetails = modifications.map(mod => {
           const modDetail = product.modifications?.find(m => m.id === mod.id);
           return {
@@ -81,7 +210,8 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
         
         // Calculate total price including modifications
         const modificationsTotal = modificationDetails.reduce((sum, mod) => sum + (mod.price * mod.quantity), 0);
-        const totalPrice = (unitPrice + modificationsTotal) * 1; // Quantity is 1 for new items
+        const unitPrice = basePrice + variantPriceAdjustment + modificationsTotal;
+        const totalPrice = unitPrice * 1; // Quantity is 1 for new items
         
         const newItem: CartItem = {
           id: `${product.id}-${variantId || 'default'}-${Date.now()}`,
@@ -89,8 +219,10 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
           productName: product.name,
           variantId: variant?.id,
           variantName: variant?.name,
+          basePrice,
+          variantPriceAdjustment,
           quantity: 1,
-          unitPrice: unitPrice + modificationsTotal,
+          unitPrice,
           totalPrice: totalPrice,
           modifications: modificationDetails
         };
@@ -98,9 +230,6 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
         return [...prevCart, newItem];
       }
     });
-    
-    // Open cart sidebar when adding items
-    setIsCartOpen(true);
   };
 
   const updateCartQuantity = (itemId: string, newQuantity: number) => {
@@ -149,6 +278,66 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
+  const openHistory = async () => {
+    setShowHistoryModal(true);
+    const phone = normalizePhone(loadCustomerProfile().phoneNumber);
+    setHistoryPhone(phone);
+    setLocalHistory(loadLocalOrderHistory(phone));
+    setServerHistory([]);
+    setHistoryError(null);
+
+    if (!phone) {
+      return;
+    }
+
+    setHistoryLoading(true);
+    try {
+      const response = await apiService.getGuestOrderHistory({
+        phone,
+        storeId: tenantStoreInfo.store.id,
+      });
+      setServerHistory(response.data);
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : 'Failed to load order history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const formatCurrency = (value: number) => `Rp ${value.toLocaleString('id-ID')}`;
+  const formatDate = (value: string) => new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+
+  const getOrderDetailItems = (order: any | LocalOrderHistoryItem) => {
+    if ('items' in order && Array.isArray(order.items)) {
+      return order.items.map((item: LocalOrderHistoryItem['items'][number]) => ({
+        name: item.name,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice,
+        variantName: null,
+        modifications: [],
+      }));
+    }
+
+    return (order.order_items ?? []).map((item: any) => ({
+      name: item.product_snapshot?.name ?? 'Item',
+      quantity: Number(item.quantity ?? 0),
+      totalPrice: Number(item.total_price ?? 0),
+      variantName: item.variant_snapshot?.name ?? null,
+      modifications: Array.isArray(item.modifications_snapshot) ? item.modifications_snapshot : [],
+    }));
+  };
+
+  const getOrderDetailTotal = (order: any | LocalOrderHistoryItem) => {
+    if ('total' in order) {
+      return order.total;
+    }
+
+    return Number(order.grand_total ?? 0);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -178,6 +367,13 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
             <p className="text-sm text-gray-500">Table: {tenantStoreInfo.store.tableCode}</p>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={openHistory}
+              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+              title="Profile"
+            >
+              <UserRound className="w-5 h-5" />
+            </button>
             <button 
               onClick={() => setShowShareModal(true)}
               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
@@ -189,11 +385,12 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
               <div className="relative">
                 <button 
                   onClick={() => setIsCartOpen(true)}
-                  className="flex items-center space-x-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                  aria-label="Open cart"
                 >
-                  <span>Cart</span>
+                  <ShoppingCart className="h-5 w-5" />
                   {cartItemCount > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                       {cartItemCount}
                     </span>
                   )}
@@ -205,12 +402,11 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Products Grid - Takes 3/4 of the width on medium screens and up */}
-          <div className="md:col-span-3">
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-24 sm:px-6 lg:px-8 md:pb-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Menu</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {products.map(product => (
                 <ProductCard 
                   key={product.id} 
@@ -220,9 +416,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
               ))}
             </div>
           </div>
-          
-          {/* Cart Sidebar - Hidden on mobile, visible on desktop */}
-          <div className="md:col-span-1 hidden md:block">
+          <div className="hidden md:block">
             <CartSidebar 
               cart={cart}
               onUpdateQuantity={updateCartQuantity}
@@ -230,6 +424,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
               onClearCart={clearCart}
               total={cartTotal}
               tenantStoreInfo={tenantStoreInfo}
+              paymentMethods={paymentMethods}
               isOpen={isCartOpen}
               onClose={() => setIsCartOpen(false)}
             />
@@ -239,18 +434,18 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
 
       {/* Mobile Cart Button */}
       {cartItemCount > 0 && !isViewOnly && (
-        <div className="fixed bottom-4 right-4 md:hidden">
+        <div className="fixed inset-x-4 bottom-4 z-40 md:hidden">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="bg-blue-600 text-white rounded-full p-4 shadow-lg flex items-center"
+            className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg shadow-blue-600/20"
           >
-            <span>View Cart ({cartItemCount})</span>
+            <ShoppingCart className="mr-2 h-5 w-5" />
+            <span>{cartItemCount} item · Rp {cartTotal.toLocaleString('id-ID')}</span>
           </button>
         </div>
       )}
 
-      {/* Mobile Cart Sidebar */}
-      <div className={`fixed inset-0 z-50 ${isCartOpen ? 'block' : 'hidden'}`}>
+      <div className={`fixed inset-0 z-50 md:hidden ${isCartOpen ? 'block' : 'hidden'}`}>
         <div 
           className="absolute inset-0 bg-black bg-opacity-50"
           onClick={() => setIsCartOpen(false)}
@@ -263,11 +458,202 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
             onClearCart={clearCart}
             total={cartTotal}
             tenantStoreInfo={tenantStoreInfo}
+            paymentMethods={paymentMethods}
             isOpen={isCartOpen}
             onClose={() => setIsCartOpen(false)}
           />
         </div>
       </div>
+      {/* Share Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm"
+            onClick={() => setShowHistoryModal(false)}
+          />
+          <div className="relative flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Profil</h3>
+                <p className="text-sm text-gray-500">Customer information dan pesanan saya.</p>
+              </div>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+                aria-label="Close order history"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-6">
+              {(() => {
+                const profile = loadCustomerProfile();
+
+                return (
+                  <div className="mb-5 rounded-lg border border-gray-200 p-4">
+                    <div className="text-sm font-semibold text-gray-900">Customer Information</div>
+                    {profile.name || profile.phoneNumber ? (
+                      <div className="mt-2 space-y-1 text-sm text-gray-600">
+                        {profile.name && <div>{profile.name}</div>}
+                        {profile.phoneNumber && <div>{normalizePhone(profile.phoneNumber)}</div>}
+                        {profile.email && <div>{profile.email}</div>}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-gray-500">Belum ada customer information tersimpan.</p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {!normalizePhone(historyPhone) && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  Isi nomor HP saat checkout agar pesanan tersimpan dan mudah dicari lagi.
+                </div>
+              )}
+
+              {historyError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {historyError}
+                </div>
+              )}
+
+              {historyLoading ? (
+                <div className="py-8 text-center text-gray-500">Loading history...</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-gray-900">Pesanan Saya</div>
+
+                  {[...serverHistory, ...localHistory].length === 0 && normalizePhone(historyPhone) && (
+                    <div className="py-8 text-center text-gray-500">Belum ada riwayat pesanan.</div>
+                  )}
+
+                  {serverHistory.map((order) => (
+                    <button
+                      key={`server-${order.id}`}
+                      type="button"
+                      onClick={() => setSelectedOrder(order)}
+                      className="w-full rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-gray-900">Order #{String(order.id).slice(0, 8)}</div>
+                          <div className="text-sm text-gray-500">{order.created_at ? formatDate(order.created_at) : '-'}</div>
+                          <div className="text-sm text-gray-500">Status: {order.status ?? 'pending'}</div>
+                        </div>
+                        <div className="text-right font-semibold">{formatCurrency(Number(order.grand_total ?? 0))}</div>
+                      </div>
+                    </button>
+                  ))}
+
+                  {localHistory.map((order) => (
+                    <button
+                      key={`local-${order.id}`}
+                      type="button"
+                      onClick={() => setSelectedOrder(order)}
+                      className="w-full rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-gray-900">
+                            {order.orderId ? `Order #${order.orderId.slice(0, 8)}` : order.storeName}
+                          </div>
+                          <div className="text-sm text-gray-500">{formatDate(order.createdAt)}</div>
+                          <div className="text-sm text-gray-500">Payment: {order.paymentMethod}</div>
+                        </div>
+                        <div className="text-right font-semibold">{formatCurrency(order.total)}</div>
+                      </div>
+                      <div className="mt-3 space-y-1 text-sm text-gray-600">
+                        {order.items.map((item, index) => (
+                          <div key={`${order.id}-${index}`} className="flex justify-between gap-3">
+                            <span>{item.quantity}x {item.name}</span>
+                            <span>{formatCurrency(item.totalPrice)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
+                Untuk tracking lintas device, login atau daftar akun customer. Saat endpoint histori login sudah aktif penuh, data tidak bergantung pada localStorage perangkat.
+                <div className="mt-3 flex gap-2">
+                  <a href="/login" className="rounded-md border border-gray-200 bg-white px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Login</a>
+                  <a href="/register" className="rounded-md bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700">Daftar</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedOrder && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setSelectedOrder(null)} />
+          <div className="relative flex max-h-[88vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {'orderId' in selectedOrder && selectedOrder.orderId
+                    ? `Order #${selectedOrder.orderId.slice(0, 8)}`
+                    : `Order #${String(selectedOrder.id).slice(0, 8)}`}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {'createdAt' in selectedOrder
+                    ? formatDate(selectedOrder.createdAt)
+                    : selectedOrder.created_at ? formatDate(selectedOrder.created_at) : '-'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+                aria-label="Close order detail"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-6">
+              <div className="space-y-3">
+                {getOrderDetailItems(selectedOrder).map((item: any, index: number) => (
+                  <div key={`${index}-${item.name}`} className="rounded-lg border border-gray-200 p-4">
+                    <div className="flex justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-gray-900">{item.quantity}x {item.name}</div>
+                        {item.variantName && <div className="text-sm text-gray-500">{item.variantName}</div>}
+                      </div>
+                      <div className="font-medium text-gray-900">{formatCurrency(item.totalPrice)}</div>
+                    </div>
+
+                    {item.modifications.length > 0 && (
+                      <div className="mt-2 space-y-1 text-sm text-gray-600">
+                        {item.modifications.map((modification: any, modIndex: number) => (
+                          <div key={`${modIndex}-${modification.id ?? modification.name}`} className="flex justify-between gap-3">
+                            <span>+ {modification.quantity ?? 1}x {modification.name ?? 'Add-on'}</span>
+                            <span>{formatCurrency(Number(modification.price ?? 0) * Number(modification.quantity ?? 1))}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex justify-between border-t border-gray-200 pt-4 text-lg font-semibold">
+                <span>Total</span>
+                <span>{formatCurrency(getOrderDetailTotal(selectedOrder))}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

@@ -62,7 +62,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else {
         // Add new item to cart
         const variant = variantId && product.variants ? product.variants.find(v => v.id === variantId) : undefined;
-        const basePrice = variant ? variant.price : product.price;
+        const basePrice = product.price;
+        const variantPriceAdjustment = variant ? Math.max(variant.price - basePrice, 0) : 0;
         const modificationDetails = modifications.map(mod => {
           const modDetail = product.modifications?.find(m => m.id === mod.id);
           return {
@@ -75,7 +76,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         
         // Calculate total price including modifications
         const modificationsTotal = modificationDetails.reduce((sum, mod) => sum + (mod.price * mod.quantity), 0);
-        const unitPrice = basePrice + modificationsTotal;
+        const unitPrice = basePrice + variantPriceAdjustment + modificationsTotal;
         const totalPrice = unitPrice * 1; // Quantity is 1 for new items
         
         const newItem: CartItem = {
@@ -84,6 +85,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           productName: product.name,
           variantId: variant?.id,
           variantName: variant?.name,
+          basePrice,
+          variantPriceAdjustment,
           quantity: 1,
           unitPrice: unitPrice,
           totalPrice: totalPrice,

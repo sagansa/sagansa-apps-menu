@@ -1,12 +1,17 @@
 'use client';
 
-import { BlurView } from 'expo-blur';
-import { Platform, StyleSheet, View, ViewProps } from 'react-native';
+import { CSSProperties, HTMLAttributes } from 'react';
 
-interface LiquidGlassProps extends ViewProps {
+interface LiquidGlassProps extends HTMLAttributes<HTMLDivElement> {
   intensity?: number;
   tint?: 'light' | 'dark' | 'default';
 }
+
+const tintBackground: Record<NonNullable<LiquidGlassProps['tint']>, string> = {
+  default: 'rgba(255, 255, 255, 0.72)',
+  light: 'rgba(255, 255, 255, 0.82)',
+  dark: 'rgba(15, 23, 42, 0.72)',
+};
 
 export function LiquidGlass({ 
   intensity = 80, 
@@ -15,44 +20,21 @@ export function LiquidGlass({
   children, 
   ...props 
 }: LiquidGlassProps) {
-  if (Platform.OS === 'web') {
-    return (
-      <View
-        style={[
-          styles.webContainer,
-          style,
-        ]}
-        {...props}
-      >
-        {children}
-      </View>
-    );
-  }
+  const blur = Math.max(8, Math.min(intensity / 4, 28));
+  const glassStyle: CSSProperties = {
+    backgroundColor: tintBackground[tint],
+    backdropFilter: `blur(${blur}px)`,
+    border: '1px solid rgba(26, 26, 0, 0.16)',
+    borderRadius: 16,
+    ...style,
+  };
 
   return (
-    <BlurView
-      intensity={intensity}
-      tint={tint}
-      style={[styles.nativeContainer, style]}
+    <div
+      style={glassStyle}
       {...props}
     >
       {children}
-    </BlurView>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  webContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.72)',
-    backdropFilter: 'blur(20px)',
-    borderWidth: 1,
-    borderColor: 'rgba(26, 26, 0, 0.16)',
-    borderRadius: 16,
-  },
-  nativeContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(26, 26, 0, 0.16)',
-    borderRadius: 16,
-  },
-});
