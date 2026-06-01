@@ -364,7 +364,11 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{tenantStoreInfo.store.name}</h1>
-            <p className="text-sm text-gray-500">Table: {tenantStoreInfo.store.tableCode}</p>
+            <p className="text-sm text-gray-500">
+              {tenantStoreInfo.store.orderType === 'takeaway'
+                ? 'Takeaway / Non-online'
+                : `Table: ${tenantStoreInfo.store.tableCode}`}
+            </p>
           </div>
           <div className="flex items-center space-x-2">
             <button

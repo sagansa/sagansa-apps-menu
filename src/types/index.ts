@@ -6,6 +6,7 @@ export interface TenantStoreInfo {
     name: string;
     nickname?: string;
     tableCode: string;
+    orderType?: 'dine-in' | 'takeaway';
   };
 }
 

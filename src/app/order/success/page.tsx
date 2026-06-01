@@ -1,14 +1,22 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 const formatCurrency = (value: number) => `Rp ${value.toLocaleString('id-ID')}`;
-const getPaymentStatus = (status: string) => {
+const getPaymentStatus = (status: string, payment: string) => {
   if (['paid', 'success', 'completed'].includes(status.toLowerCase())) {
     return {
       label: 'Pembayaran berhasil',
       className: 'bg-green-100 text-green-700',
+    };
+  }
+
+  if (payment.toLowerCase() === 'bayar di kasir') {
+    return {
+      label: 'Pending',
+      className: 'bg-blue-100 text-blue-700',
     };
   }
 
@@ -18,13 +26,14 @@ const getPaymentStatus = (status: string) => {
   };
 };
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId');
   const total = Number(searchParams.get('total') ?? 0);
   const payment = searchParams.get('payment') ?? 'Bayar di Kasir';
-  const paymentStatus = getPaymentStatus(searchParams.get('paymentStatus') ?? 'pending');
+  const paymentStatus = getPaymentStatus(searchParams.get('paymentStatus') ?? 'pending', payment);
   const returnUrl = searchParams.get('returnUrl') || '/';
+  const isPayAtCounter = payment.toLowerCase() === 'bayar di kasir';
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-10">
@@ -34,7 +43,9 @@ export default function OrderSuccessPage() {
         </div>
         <h1 className="mt-5 text-2xl font-bold text-gray-900">Pesanan berhasil dikirim</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Pesanan sudah masuk dan akan diproses oleh toko.
+          {isPayAtCounter
+            ? 'Segera ke kasir untuk melakukan pembayaran.'
+            : 'Silakan tunggu, pesanan akan segera diproses.'}
         </p>
 
         <div className="mt-6 space-y-3 rounded-lg border border-gray-200 p-4 text-left text-sm">
@@ -82,5 +93,13 @@ export default function OrderSuccessPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }

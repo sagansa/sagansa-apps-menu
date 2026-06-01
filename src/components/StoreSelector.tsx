@@ -56,7 +56,8 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
         id: store.id,
         name: store.name,
         nickname: store.nickname,
-        tableCode: 'WALK-IN', // Default table code for manual selection
+        tableCode: 'TAKEAWAY',
+        orderType: 'takeaway',
       }
     };
     onSelect(info);

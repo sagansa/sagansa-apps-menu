@@ -84,8 +84,8 @@ export function CartSidebar({
     if (!qrisSvg || !qrisPayment) return '';
 
     const storeName = tenantStoreInfo.store.name || tenantStoreInfo.name;
-    const tableCode = tenantStoreInfo.store.tableCode || 'STORE';
-    const orderType = tableCode === 'STORE' ? 'Walk-in / Store order' : `Meja ${tableCode}`;
+    const tableCode = tenantStoreInfo.store.tableCode || 'TAKEAWAY';
+    const orderType = tenantStoreInfo.store.orderType === 'takeaway' ? 'Takeaway / Non-online' : `Meja ${tableCode}`;
     const customerName = customerInfo.name.trim() || '-';
     const customerPhone = normalizePhone(customerInfo.phoneNumber) || '-';
     const shortOrderId = qrisPayment.orderId ? qrisPayment.orderId.slice(0, 8).toUpperCase() : '-';
@@ -236,6 +236,7 @@ export function CartSidebar({
         tenant_id: tenantStoreInfo.id,
         store_id: tenantStoreInfo.store.id,
         table_code: tenantStoreInfo.store.tableCode,
+        order_type: tenantStoreInfo.store.orderType ?? (tenantStoreInfo.store.tableCode === 'TAKEAWAY' ? 'takeaway' : 'dine-in'),
         customer_name: customerInfo.name.trim(),
         customer_email: customerInfo.email.trim() || null,
         customer_phone: normalizePhone(customerInfo.phoneNumber),
@@ -358,6 +359,25 @@ export function CartSidebar({
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const handleCompleteQrisPayment = () => {
+    if (!qrisPayment) {
+      return;
+    }
+
+    const params = new URLSearchParams({
+      orderId: qrisPayment.orderId ?? '',
+      total: String(qrisPayment.amount),
+      payment: qrisPayment.paymentLabel,
+      paymentStatus: 'pending',
+    });
+
+    params.set('returnUrl', qrisPayment.returnUrl);
+
+    setShowQrisModal(false);
+    onClose();
+    router.push(`/order/success?${params.toString()}`);
   };
 
   const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
@@ -699,13 +719,10 @@ export function CartSidebar({
 
               <button
                 type="button"
-                onClick={() => {
-                  setShowQrisModal(false);
-                  onClose();
-                }}
-                className="mt-5 w-full rounded-md px-4 py-3 font-semibold text-gray-600 hover:bg-gray-100"
+                onClick={handleCompleteQrisPayment}
+                className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
               >
-                Kembali ke Menu
+                Pesanan Berhasil Dikirim
               </button>
             </div>
           </div>

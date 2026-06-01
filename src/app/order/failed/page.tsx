@@ -1,9 +1,10 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
-export default function OrderFailedPage() {
+function OrderFailedContent() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message') || 'Pesanan gagal dikirim. Silakan coba lagi.';
   const returnUrl = searchParams.get('returnUrl') || '/';
@@ -35,5 +36,13 @@ export default function OrderFailedPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function OrderFailedPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrderFailedContent />
+    </Suspense>
   );
 }

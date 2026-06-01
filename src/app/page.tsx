@@ -1,13 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MenuPage } from '@/components/MenuPage';
 import { StoreSelector } from '@/components/StoreSelector';
 import { TenantStoreInfo } from '@/types';
 import apiService from '@/lib/api';
 
-export default function Home() {
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0A0A0A]">
+      <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-gold"></div>
+      <p className="animate-pulse text-slate-400">Initializing Sagansa...</p>
+    </div>
+  );
+}
+
+function HomeContent() {
   const searchParams = useSearchParams();
   const [tenantStoreInfo, setTenantStoreInfo] = useState<TenantStoreInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +29,8 @@ export default function Home() {
         const tenantId = searchParams.get('tenantId');
         const storeId = searchParams.get('storeId');
         const tableCode = searchParams.get('tableCode') || 'default';
+        const orderTypeParam = searchParams.get('orderType');
+        const orderType = orderTypeParam === 'takeaway' ? 'takeaway' : orderTypeParam === 'dine-in' ? 'dine-in' : undefined;
         
         if (!tenantId || !storeId) {
           setLoading(false);
@@ -45,6 +56,7 @@ export default function Home() {
             name: storeRes.name,
             nickname: storeRes.nickname,
             tableCode: tableCode,
+            orderType,
           }
         };
 
@@ -61,12 +73,7 @@ export default function Home() {
   }, [searchParams]);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0A0A0A]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold mb-4"></div>
-        <p className="text-slate-400 animate-pulse">Initializing Sagansa...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (tenantStoreInfo) {
@@ -76,5 +83,13 @@ export default function Home() {
   // If no info and not loading, show selection
   return (
     <StoreSelector onSelect={(info) => setTenantStoreInfo(info)} />
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <HomeContent />
+    </Suspense>
   );
 }
