@@ -63,8 +63,8 @@ export const CheckoutModal = ({ isOpen, onClose, cart, total, tenantStoreInfo, o
           modifications: item.modifications.map(mod => ({
             product_modification_id: mod.id,
             price: mod.price,
-            quantity: mod.quantity
-          })).filter(mod => mod.quantity > 0) // Only include modifications with quantity > 0
+            quantity: 1
+          }))
         }))
       };
       
@@ -164,7 +164,7 @@ export const CheckoutModal = ({ isOpen, onClose, cart, total, tenantStoreInfo, o
                       {item.modifications.length > 0 && (
                         <div className="text-gray-500">
                           {item.modifications.map(mod => (
-                            <div key={mod.id}>+ {mod.quantity}x {mod.name}</div>
+                            <div key={mod.id}>+ {mod.name}</div>
                           ))}
                         </div>
                       )}

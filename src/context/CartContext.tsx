@@ -70,12 +70,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
             id: modDetail?.id || mod.id,
             name: modDetail?.name || `Modification ${mod.id}`,
             price: modDetail?.price || 0,
-            quantity: mod.quantity
+            quantity: 1
           };
         });
         
         // Calculate total price including modifications
-        const modificationsTotal = modificationDetails.reduce((sum, mod) => sum + (mod.price * mod.quantity), 0);
+        const modificationsTotal = modificationDetails.reduce((sum, mod) => sum + mod.price, 0);
         const unitPrice = basePrice + variantPriceAdjustment + modificationsTotal;
         const totalPrice = unitPrice * 1; // Quantity is 1 for new items
         

@@ -44,7 +44,7 @@ export function OrderConfirmation({ order, onNewOrder }: OrderConfirmationProps)
                   {item.modifications.length > 0 && (
                     <div className="text-sm text-gray-600 mt-1">
                       {item.modifications.map(mod => (
-                        <div key={mod.id}>+ {mod.quantity}x {mod.name}</div>
+                        <div key={mod.id}>+ {mod.name}</div>
                       ))}
                     </div>
                   )}

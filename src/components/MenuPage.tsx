@@ -79,6 +79,12 @@ function normalizePublicProduct(product: any): Product {
   };
 }
 
+function sortProductsByName(products: Product[]) {
+  return [...products].sort((a, b) =>
+    a.name.localeCompare(b.name, 'id', { sensitivity: 'base' })
+  );
+}
+
 function normalizePublicPaymentMethods(methods: unknown): PublicPaymentMethod[] {
   if (!Array.isArray(methods)) {
     return [];
@@ -118,7 +124,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
       try {
         const response = await apiService.getPublicProducts(tenantStoreInfo.store.id);
         if (response.success) {
-          setProducts(response.data.map(normalizePublicProduct));
+          setProducts(sortProductsByName(response.data.map(normalizePublicProduct)));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products');
@@ -204,12 +210,12 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
             id: modDetail?.id || '',
             name: modDetail?.name || '',
             price: modDetail?.price || 0,
-            quantity: mod.quantity
+            quantity: 1
           };
         });
         
         // Calculate total price including modifications
-        const modificationsTotal = modificationDetails.reduce((sum, mod) => sum + (mod.price * mod.quantity), 0);
+        const modificationsTotal = modificationDetails.reduce((sum, mod) => sum + mod.price, 0);
         const unitPrice = basePrice + variantPriceAdjustment + modificationsTotal;
         const totalPrice = unitPrice * 1; // Quantity is 1 for new items
         
@@ -639,8 +645,8 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                       <div className="mt-2 space-y-1 text-sm text-gray-600">
                         {item.modifications.map((modification: any, modIndex: number) => (
                           <div key={`${modIndex}-${modification.id ?? modification.name}`} className="flex justify-between gap-3">
-                            <span>+ {modification.quantity ?? 1}x {modification.name ?? 'Add-on'}</span>
-                            <span>{formatCurrency(Number(modification.price ?? 0) * Number(modification.quantity ?? 1))}</span>
+                            <span>+ {modification.name ?? 'Add-on'}</span>
+                            <span>{formatCurrency(Number(modification.price ?? 0))}</span>
                           </div>
                         ))}
                       </div>

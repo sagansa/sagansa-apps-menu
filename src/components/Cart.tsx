@@ -69,7 +69,7 @@ export const Cart = ({ items, onUpdateQuantity, onRemoveItem, onCheckout, total 
                     <div className="text-xs text-gray-500 mt-1">
                       {item.modifications.map(mod => (
                         <div key={mod.id}>
-                          + {mod.quantity}x {mod.name} ({formatCurrency(mod.price * mod.quantity)})
+                          + {mod.name} ({formatCurrency(mod.price)})
                         </div>
                       ))}
                     </div>

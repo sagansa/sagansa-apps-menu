@@ -258,8 +258,8 @@ export function CartSidebar({
           modifications: item.modifications.map(mod => ({
             product_modification_id: mod.id,
             price: mod.price,
-            quantity: mod.quantity
-          })).filter(mod => mod.quantity > 0)
+            quantity: 1
+          }))
         }))
       };
 
@@ -454,8 +454,8 @@ export function CartSidebar({
                     <div className="mt-2 space-y-1 text-sm text-gray-600">
                       {item.modifications.map(mod => (
                         <div key={mod.id} className="flex justify-between gap-3">
-                          <span>+ {mod.quantity}x {mod.name}</span>
-                          <span className="shrink-0">{formatCurrency(mod.price * mod.quantity)}</span>
+                          <span>+ {mod.name}</span>
+                          <span className="shrink-0">{formatCurrency(mod.price)}</span>
                         </div>
                       ))}
                     </div>

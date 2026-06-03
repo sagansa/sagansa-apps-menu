@@ -1,7 +1,0 @@
-{
-  "/_not-found": "app/_not-found.js",
-  "/order/success/page": "app/order/success/page.js",
-  "/page": "app/page.js",
-  "/test-api/page": "app/test-api/page.js",
-  "/order/failed/page": "app/order/failed/page.js"
-}

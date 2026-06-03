@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Minus, Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Product } from '@/types';
 
 interface ProductCardProps {
@@ -30,7 +30,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
   const modificationsTotal = selectedModifications.reduce((sum, item) => {
     const modification = product.modifications?.find((mod) => mod.id === item.id);
-    return sum + ((modification?.price ?? 0) * item.quantity);
+    return sum + (modification?.price ?? 0);
   }, 0);
 
   const finalPrice = selectedPrice + modificationsTotal;
@@ -72,22 +72,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         ? current.filter((item) => item.id !== modificationId)
         : [...current, { id: modificationId, quantity: 1 }];
     });
-  };
-
-  const updateModificationQuantity = (modificationId: string, quantity: number) => {
-    setSelectedModifications((current) => {
-      if (quantity < 1) {
-        return current.filter((item) => item.id !== modificationId);
-      }
-
-      return current.map((item) => (
-        item.id === modificationId ? { ...item, quantity } : item
-      ));
-    });
-  };
-
-  const getModificationQuantity = (modificationId: string) => {
-    return selectedModifications.find((item) => item.id === modificationId)?.quantity ?? 0;
   };
 
   const handleAddToCart = () => {
@@ -228,8 +212,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                   <h3 className="text-sm font-semibold text-gray-900">Add-ons</h3>
                   <div className="mt-3 space-y-2">
                     {product.modifications.map((modification) => {
-                      const quantity = getModificationQuantity(modification.id);
-                      const selected = quantity > 0;
+                      const selected = selectedModifications.some((item) => item.id === modification.id);
 
                       return (
                         <div key={modification.id} className="rounded-md border border-gray-200 p-3">
@@ -247,30 +230,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                                 <span className="text-sm text-gray-500">+{formatCurrency(modification.price)}</span>
                               </span>
                             </label>
-
-                            {selected && (
-                              <div className="flex items-center">
-                                <button
-                                  type="button"
-                                  onClick={() => updateModificationQuantity(modification.id, quantity - 1)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-l-md border border-gray-300 text-gray-600"
-                                  aria-label={`Decrease ${modification.name}`}
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </button>
-                                <span className="flex h-8 w-9 items-center justify-center border-y border-gray-300 text-sm">
-                                  {quantity}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => updateModificationQuantity(modification.id, quantity + 1)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-r-md border border-gray-300 text-gray-600"
-                                  aria-label={`Increase ${modification.name}`}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </div>
                       );
