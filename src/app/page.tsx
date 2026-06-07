@@ -55,6 +55,10 @@ function HomeContent() {
             id: storeId,
             name: storeRes.name,
             nickname: storeRes.nickname,
+            phone: storeRes.phone,
+            no_telp: storeRes.no_telp,
+            latitude: storeRes.latitude,
+            longitude: storeRes.longitude,
             tableCode: tableCode,
             orderType,
           }

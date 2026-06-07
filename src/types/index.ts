@@ -5,6 +5,10 @@ export interface TenantStoreInfo {
     id: string;
     name: string;
     nickname?: string;
+    phone?: string | null;
+    no_telp?: string | null;
+    latitude?: number | string | null;
+    longitude?: number | string | null;
     tableCode: string;
     orderType?: 'dine-in' | 'takeaway';
   };

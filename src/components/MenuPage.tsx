@@ -11,7 +11,7 @@ import {
   LocalOrderHistoryItem,
   normalizePhone,
 } from '@/lib/orderHistory';
-import { Share2, Check, Copy, ShoppingCart, UserRound } from 'lucide-react';
+import { Share2, Check, Copy, ShoppingCart, UserRound, MapPin, MessageCircle } from 'lucide-react';
 
 interface MenuPageProps {
   tenantStoreInfo: TenantStoreInfo;
@@ -77,6 +77,45 @@ function normalizePublicProduct(product: any): Product {
           }))
       : [],
   };
+}
+
+function normalizeCoordinate(value: unknown): number | null {
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) ? coordinate : null;
+}
+
+function buildGoogleMapsUrl(latitude: unknown, longitude: unknown): string | null {
+  const lat = normalizeCoordinate(latitude);
+  const lng = normalizeCoordinate(longitude);
+
+  if (lat === null || lng === null) {
+    return null;
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+function normalizeWhatsAppPhone(phone?: string | null): string | null {
+  const digits = (phone || '').replace(/\D/g, '');
+
+  if (!digits) {
+    return null;
+  }
+
+  if (digits.startsWith('0')) {
+    return `62${digits.slice(1)}`;
+  }
+
+  if (digits.startsWith('62')) {
+    return digits;
+  }
+
+  return digits;
+}
+
+function buildWhatsAppUrl(phone?: string | null): string | null {
+  const normalizedPhone = normalizeWhatsAppPhone(phone);
+  return normalizedPhone ? `https://wa.me/${normalizedPhone}` : null;
 }
 
 function sortProductsByName(products: Product[]) {
@@ -264,6 +303,8 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
   };
 
   const isViewOnly = tenantStoreInfo.store.tableCode === 'VIEW';
+  const mapsUrl = buildGoogleMapsUrl(tenantStoreInfo.store.latitude, tenantStoreInfo.store.longitude);
+  const whatsappUrl = buildWhatsAppUrl(tenantStoreInfo.store.phone || tenantStoreInfo.store.no_telp);
   const cartTotal = cart.reduce((total, item) => total + item.totalPrice, 0);
   const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
 
@@ -377,6 +418,30 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
             </p>
           </div>
           <div className="flex items-center space-x-2">
+            {mapsUrl && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+                title="Buka lokasi di Google Maps"
+                aria-label="Buka lokasi store di Google Maps"
+              >
+                <MapPin className="w-5 h-5" />
+              </a>
+            )}
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-gray-200"
+                title="Hubungi store via WhatsApp"
+                aria-label="Hubungi store via WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </a>
+            )}
             <button
               onClick={openHistory}
               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"

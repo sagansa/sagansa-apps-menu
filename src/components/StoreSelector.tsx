@@ -56,6 +56,10 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
         id: store.id,
         name: store.name,
         nickname: store.nickname,
+        phone: store.phone,
+        no_telp: store.no_telp,
+        latitude: store.latitude,
+        longitude: store.longitude,
         tableCode: 'TAKEAWAY',
         orderType: 'takeaway',
       }
