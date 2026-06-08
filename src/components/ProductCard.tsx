@@ -36,6 +36,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const finalPrice = selectedPrice + modificationsTotal;
   const hasOptions = Boolean(product.variants?.length || product.modifications?.length);
   const variantRequired = Boolean(product.variants?.length);
+  const isBundle = product.type === 'bundle';
 
   const variantLabel = useMemo(() => {
     const firstVariant = product.variants?.[0]?.name;
@@ -117,6 +118,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         )}
 
         <div className="p-3 sm:p-4">
+          {isBundle && (
+            <span className="mb-2 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+              Paket
+            </span>
+          )}
           <h3 className="min-h-10 overflow-hidden text-sm font-semibold leading-5 text-gray-900 sm:text-base">
             {product.name}
           </h3>
@@ -133,7 +139,14 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
               <div className="min-w-0">
-                <h2 className="truncate text-xl font-bold text-gray-900">{product.name}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="truncate text-xl font-bold text-gray-900">{product.name}</h2>
+                  {isBundle && (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                      Paket
+                    </span>
+                  )}
+                </div>
                 {product.category && <p className="text-sm text-gray-500">{product.category}</p>}
               </div>
               <button
@@ -174,6 +187,20 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                   <div className="text-sm font-semibold text-gray-900">Description</div>
                   <p className="mt-1 text-sm leading-6 text-gray-600">{product.description}</p>
                 </div>
+              )}
+
+              {isBundle && product.bundleItems && product.bundleItems.length > 0 && (
+                <section className="mt-5 rounded-lg border border-gray-200 p-4">
+                  <div className="text-sm font-semibold text-gray-900">Isi Paket</div>
+                  <div className="mt-3 space-y-2">
+                    {product.bundleItems.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-gray-700">{item.componentProduct?.name || 'Produk'}</span>
+                        <span className="font-medium text-gray-900">x{item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
 
               {product.variants && product.variants.length > 0 && (

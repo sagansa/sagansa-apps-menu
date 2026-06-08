@@ -18,12 +18,27 @@ export interface Product {
   id: string;
   name: string;
   description?: string;
+  type?: 'single' | 'bundle';
   price: number;
   image?: string;
   isAvailable: boolean;
   category?: string;
+  stock?: number;
+  bundleItems?: ProductBundleItem[];
   variants?: ProductVariant[];
   modifications?: ProductModification[];
+}
+
+export interface ProductBundleItem {
+  id: string;
+  componentProductId: string;
+  quantity: number;
+  componentProduct?: {
+    id: string;
+    name: string;
+    price?: number;
+    stock?: number;
+  } | null;
 }
 
 export interface ProductVariant {

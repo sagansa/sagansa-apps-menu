@@ -24,6 +24,11 @@ function toNumber(value: unknown, fallback = 0): number {
 
 function normalizePublicProduct(product: any): Product {
   const basePrice = toNumber(product.price);
+  const productType = product.type === 'bundle' ? 'bundle' : 'single';
+  const bundleStock = product.bundle_available_stock ?? product.bundleAvailableStock;
+  const stock = productType === 'bundle' && bundleStock !== null && bundleStock !== undefined
+    ? toNumber(bundleStock)
+    : toNumber(product.stock);
   const variantsFromGroups = Array.isArray(product.variant_groups)
     ? product.variant_groups.flatMap((group: any) =>
         Array.isArray(group.variants)
@@ -55,15 +60,32 @@ function normalizePublicProduct(product: any): Product {
     id: String(product.id),
     name: String(product.name),
     description: product.description || undefined,
+    type: productType,
     price: basePrice,
     image: product.image || undefined,
+    stock,
     category: typeof product.category === 'string'
       ? product.category
       : product.category_detail?.name,
     isAvailable: product.isAvailable ?? (
       product.is_active !== false &&
-      (product.stock === null || product.stock === undefined || toNumber(product.stock) > 0)
+      (product.remaining === false || stock > 0)
     ),
+    bundleItems: Array.isArray(product.bundle_items)
+      ? product.bundle_items.map((item: any) => ({
+          id: String(item.id),
+          componentProductId: String(item.component_product_id),
+          quantity: toNumber(item.quantity, 1),
+          componentProduct: item.component_product
+            ? {
+                id: String(item.component_product.id),
+                name: String(item.component_product.name),
+                price: toNumber(item.component_product.price),
+                stock: toNumber(item.component_product.stock),
+              }
+            : null,
+        }))
+      : [],
     variants: variantsFromGroups.length > 0 ? variantsFromGroups : directVariants,
     modifications: Array.isArray(product.modifications)
       ? product.modifications
