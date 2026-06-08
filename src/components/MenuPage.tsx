@@ -51,10 +51,12 @@ function resolveImageUrl(value: unknown): string | undefined {
     return imagePath;
   }
 
+  const cleanPath = imagePath.replace(/^\/?(storage\/)?/, '');
+  const normalizedStoragePath = cleanPath.includes('/') ? cleanPath : `products/${cleanPath}`;
+
   if (STORAGE_BASE_URL) {
     const storageBaseUrl = STORAGE_BASE_URL.replace(/\/$/, '');
-    const cleanPath = imagePath.replace(/^\/?(storage\/)?/, '');
-    return `${storageBaseUrl}/${cleanPath}`;
+    return `${storageBaseUrl}/${normalizedStoragePath}`;
   }
 
   const apiOrigin = getApiOrigin();
@@ -66,8 +68,7 @@ function resolveImageUrl(value: unknown): string | undefined {
     return `${apiOrigin}${imagePath}`;
   }
 
-  const cleanPath = imagePath.replace(/^\/?(storage\/)?/, '');
-  return `${apiOrigin}/storage/${cleanPath}`;
+  return `${apiOrigin}/storage/${normalizedStoragePath}`;
 }
 
 function normalizePublicProduct(product: any): Product {
