@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Product } from '@/types';
 
@@ -22,6 +22,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>(undefined);
   const [selectedModifications, setSelectedModifications] = useState<{ id: string; quantity: number }[]>([]);
   const [variantError, setVariantError] = useState('');
+  const [imageFailed, setImageFailed] = useState(false);
 
   const selectedPrice = useMemo(() => {
     const variant = selectedVariant ? product.variants?.find((item) => item.id === selectedVariant) : undefined;
@@ -37,6 +38,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const hasOptions = Boolean(product.variants?.length || product.modifications?.length);
   const variantRequired = Boolean(product.variants?.length);
   const isBundle = product.type === 'bundle';
+  const hasImage = Boolean(product.image && !imageFailed);
+  const bundleSummary = product.bundleItems
+    ?.map((item) => `${item.componentProduct?.name || 'Produk'} x${item.quantity}`)
+    .join(', ');
 
   const variantLabel = useMemo(() => {
     const firstVariant = product.variants?.[0]?.name;
@@ -54,6 +59,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
     return name.split(':').slice(1).join(':').trim();
   };
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [product.image]);
 
   const resetSelection = () => {
     setSelectedVariant(undefined);
@@ -103,10 +112,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         }}
         className="group cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
-        {product.image ? (
+        {hasImage ? (
           <img
             src={product.image}
             alt={product.name}
+            onError={() => setImageFailed(true)}
             className="aspect-square w-full object-cover"
           />
         ) : (
@@ -126,6 +136,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <h3 className="min-h-10 overflow-hidden text-sm font-semibold leading-5 text-gray-900 sm:text-base">
             {product.name}
           </h3>
+          {isBundle && bundleSummary && (
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
+              {bundleSummary}
+            </p>
+          )}
           {!product.isAvailable && (
             <p className="mt-2 text-xs font-medium text-gray-500">Unavailable</p>
           )}
@@ -160,10 +175,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             </div>
 
             <div className="overflow-y-auto p-5">
-              {product.image ? (
+              {hasImage ? (
                 <img
                   src={product.image}
                   alt={product.name}
+                  onError={() => setImageFailed(true)}
                   className="h-56 w-full rounded-lg object-cover"
                 />
               ) : (
@@ -189,17 +205,21 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                 </div>
               )}
 
-              {isBundle && product.bundleItems && product.bundleItems.length > 0 && (
+              {isBundle && (
                 <section className="mt-5 rounded-lg border border-gray-200 p-4">
                   <div className="text-sm font-semibold text-gray-900">Isi Paket</div>
-                  <div className="mt-3 space-y-2">
-                    {product.bundleItems.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                        <span className="text-gray-700">{item.componentProduct?.name || 'Produk'}</span>
-                        <span className="font-medium text-gray-900">x{item.quantity}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {product.bundleItems && product.bundleItems.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                      {product.bundleItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-gray-700">{item.componentProduct?.name || 'Produk'}</span>
+                          <span className="font-medium text-gray-900">x{item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-gray-500">Detail isi paket belum tersedia.</p>
+                  )}
                 </section>
               )}
 

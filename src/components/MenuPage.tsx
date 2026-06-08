@@ -17,15 +17,66 @@ interface MenuPageProps {
   tenantStoreInfo: TenantStoreInfo;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api';
+const STORAGE_BASE_URL = process.env.NEXT_PUBLIC_STORAGE_BASE_URL;
+
 function toNumber(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function getApiOrigin(): string {
+  try {
+    if (API_BASE_URL.startsWith('/')) {
+      return typeof window !== 'undefined' ? window.location.origin : '';
+    }
+
+    return new URL(API_BASE_URL).origin;
+  } catch {
+    return '';
+  }
+}
+
+function resolveImageUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const imagePath = value.trim();
+  if (!imagePath) {
+    return undefined;
+  }
+
+  if (/^(https?:)?\/\//.test(imagePath) || imagePath.startsWith('data:') || imagePath.startsWith('blob:')) {
+    return imagePath;
+  }
+
+  if (STORAGE_BASE_URL) {
+    const storageBaseUrl = STORAGE_BASE_URL.replace(/\/$/, '');
+    const cleanPath = imagePath.replace(/^\/?(storage\/)?/, '');
+    return `${storageBaseUrl}/${cleanPath}`;
+  }
+
+  const apiOrigin = getApiOrigin();
+  if (!apiOrigin) {
+    return imagePath;
+  }
+
+  if (imagePath.startsWith('/storage/')) {
+    return `${apiOrigin}${imagePath}`;
+  }
+
+  const cleanPath = imagePath.replace(/^\/?(storage\/)?/, '');
+  return `${apiOrigin}/storage/${cleanPath}`;
 }
 
 function normalizePublicProduct(product: any): Product {
   const basePrice = toNumber(product.price);
   const productType = product.type === 'bundle' ? 'bundle' : 'single';
   const bundleStock = product.bundle_available_stock ?? product.bundleAvailableStock;
+  const rawBundleItems = Array.isArray(product.bundle_items)
+    ? product.bundle_items
+    : (Array.isArray(product.bundleItems) ? product.bundleItems : []);
   const stock = productType === 'bundle' && bundleStock !== null && bundleStock !== undefined
     ? toNumber(bundleStock)
     : toNumber(product.stock);
@@ -62,7 +113,7 @@ function normalizePublicProduct(product: any): Product {
     description: product.description || undefined,
     type: productType,
     price: basePrice,
-    image: product.image || undefined,
+    image: resolveImageUrl(product.image_url ?? product.imageUrl ?? product.image),
     stock,
     category: typeof product.category === 'string'
       ? product.category
@@ -71,21 +122,24 @@ function normalizePublicProduct(product: any): Product {
       product.is_active !== false &&
       (product.remaining === false || stock > 0)
     ),
-    bundleItems: Array.isArray(product.bundle_items)
-      ? product.bundle_items.map((item: any) => ({
+    bundleItems: rawBundleItems
+      .map((item: any) => {
+        const componentProduct = item.component_product ?? item.componentProduct;
+
+        return {
           id: String(item.id),
-          componentProductId: String(item.component_product_id),
+          componentProductId: String(item.component_product_id ?? item.componentProductId ?? ''),
           quantity: toNumber(item.quantity, 1),
-          componentProduct: item.component_product
+          componentProduct: componentProduct
             ? {
-                id: String(item.component_product.id),
-                name: String(item.component_product.name),
-                price: toNumber(item.component_product.price),
-                stock: toNumber(item.component_product.stock),
+                id: String(componentProduct.id),
+                name: String(componentProduct.name),
+                price: toNumber(componentProduct.price),
+                stock: toNumber(componentProduct.stock),
               }
             : null,
-        }))
-      : [],
+        };
+      }),
     variants: variantsFromGroups.length > 0 ? variantsFromGroups : directVariants,
     modifications: Array.isArray(product.modifications)
       ? product.modifications
