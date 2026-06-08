@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Product } from '@/types';
+import { resolveImageUrl } from '@/lib/images';
 
 interface ProductCardProps {
   product: Product;
@@ -38,7 +39,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const hasOptions = Boolean(product.variants?.length || product.modifications?.length);
   const variantRequired = Boolean(product.variants?.length);
   const isBundle = product.type === 'bundle';
-  const hasImage = Boolean(product.image && !imageFailed);
+  const imageSrc = resolveImageUrl(product.image);
+  const hasImage = Boolean(imageSrc && !imageFailed);
   const bundleSummary = product.bundleItems
     ?.map((item) => `${item.componentProduct?.name || 'Produk'} x${item.quantity}`)
     .join(', ');
@@ -62,7 +64,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
   useEffect(() => {
     setImageFailed(false);
-  }, [product.image]);
+  }, [imageSrc]);
 
   const resetSelection = () => {
     setSelectedVariant(undefined);
@@ -114,7 +116,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
       >
         {hasImage ? (
           <img
-            src={product.image}
+            src={imageSrc}
             alt={product.name}
             onError={() => setImageFailed(true)}
             className="aspect-square w-full object-cover"
@@ -177,7 +179,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             <div className="overflow-y-auto p-5">
               {hasImage ? (
                 <img
-                  src={product.image}
+                  src={imageSrc}
                   alt={product.name}
                   onError={() => setImageFailed(true)}
                   className="h-56 w-full rounded-lg object-cover"

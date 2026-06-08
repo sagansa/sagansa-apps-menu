@@ -11,64 +11,16 @@ import {
   LocalOrderHistoryItem,
   normalizePhone,
 } from '@/lib/orderHistory';
+import { resolveImageUrl } from '@/lib/images';
 import { Share2, Check, Copy, ShoppingCart, UserRound, MapPin, MessageCircle } from 'lucide-react';
 
 interface MenuPageProps {
   tenantStoreInfo: TenantStoreInfo;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api';
-const STORAGE_BASE_URL = process.env.NEXT_PUBLIC_STORAGE_BASE_URL;
-
 function toNumber(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function getApiOrigin(): string {
-  try {
-    if (API_BASE_URL.startsWith('/')) {
-      return typeof window !== 'undefined' ? window.location.origin : '';
-    }
-
-    return new URL(API_BASE_URL).origin;
-  } catch {
-    return '';
-  }
-}
-
-function resolveImageUrl(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const imagePath = value.trim();
-  if (!imagePath) {
-    return undefined;
-  }
-
-  if (/^(https?:)?\/\//.test(imagePath) || imagePath.startsWith('data:') || imagePath.startsWith('blob:')) {
-    return imagePath;
-  }
-
-  const cleanPath = imagePath.replace(/^\/?(storage\/)?/, '');
-  const normalizedStoragePath = cleanPath.includes('/') ? cleanPath : `products/${cleanPath}`;
-
-  if (STORAGE_BASE_URL) {
-    const storageBaseUrl = STORAGE_BASE_URL.replace(/\/$/, '');
-    return `${storageBaseUrl}/${normalizedStoragePath}`;
-  }
-
-  const apiOrigin = getApiOrigin();
-  if (!apiOrigin) {
-    return imagePath;
-  }
-
-  if (imagePath.startsWith('/storage/')) {
-    return `${apiOrigin}${imagePath}`;
-  }
-
-  return `${apiOrigin}/storage/${normalizedStoragePath}`;
 }
 
 function normalizePublicProduct(product: any): Product {
