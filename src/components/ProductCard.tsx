@@ -7,6 +7,7 @@ import { resolveImageUrl } from '@/lib/images';
 
 interface ProductCardProps {
   product: Product;
+  viewMode?: 'grid' | 'list';
   onAddToCart?: (product: Product, variantId?: string, modifications?: { id: string; quantity: number }[]) => void;
 }
 
@@ -18,7 +19,7 @@ const getInitials = (name: string) => {
   return initials || 'P';
 };
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart, viewMode = 'grid' }: ProductCardProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>(undefined);
   const [selectedModifications, setSelectedModifications] = useState<{ id: string; quantity: number }[]>([]);
@@ -112,41 +113,66 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             openDetail();
           }
         }}
-        className="group cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        className={`group cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+          viewMode === 'grid' ? 'hover:-translate-y-0.5' : ''
+        }`}
       >
-        {hasImage ? (
-          <img
-            src={imageSrc}
-            alt={product.name}
-            onError={() => setImageFailed(true)}
-            className="aspect-square w-full object-cover"
-          />
-        ) : (
-          <div className="flex aspect-square w-full items-center justify-center bg-slate-100">
-            <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-600 text-2xl font-bold text-white sm:h-20 sm:w-20 sm:text-3xl">
-              {getInitials(product.name)}
-            </span>
+        {viewMode === 'list' ? (
+          <div className="flex gap-3 p-3">
+            <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg">
+              {hasImage ? (
+                <img
+                  src={imageSrc}
+                  alt={product.name}
+                  onError={() => setImageFailed(true)}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-slate-100">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-600 text-sm font-bold text-white">
+                    {getInitials(product.name)}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col justify-center">
+              <h3 className="truncate text-sm font-semibold leading-5 text-gray-900">
+                {product.name}
+              </h3>
+              <p className="mt-0.5 text-sm font-bold text-blue-600">{formatCurrency(product.price)}</p>
+              {!product.isAvailable && (
+                <p className="mt-0.5 text-xs font-medium text-gray-500">Unavailable</p>
+              )}
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {hasImage ? (
+              <img
+                src={imageSrc}
+                alt={product.name}
+                onError={() => setImageFailed(true)}
+                className="aspect-square w-full object-cover"
+              />
+            ) : (
+              <div className="flex aspect-square w-full items-center justify-center bg-slate-100">
+                <span className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-600 text-2xl font-bold text-white sm:h-20 sm:w-20 sm:text-3xl">
+                  {getInitials(product.name)}
+                </span>
+              </div>
+            )}
 
-        <div className="p-3 sm:p-4">
-          {isBundle && (
-            <span className="mb-2 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-              Paket
-            </span>
-          )}
-          <h3 className="min-h-10 overflow-hidden text-sm font-semibold leading-5 text-gray-900 sm:text-base">
-            {product.name}
-          </h3>
-          {isBundle && bundleSummary && (
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
-              {bundleSummary}
-            </p>
-          )}
-          {!product.isAvailable && (
-            <p className="mt-2 text-xs font-medium text-gray-500">Unavailable</p>
-          )}
-        </div>
+            <div className="p-3 sm:p-4">
+              <h3 className="overflow-hidden text-sm font-semibold leading-5 text-gray-900">
+                {product.name}
+              </h3>
+              <p className="mt-1 text-sm font-bold text-blue-600">{formatCurrency(product.price)}</p>
+              {!product.isAvailable && (
+                <p className="mt-1 text-xs font-medium text-gray-500">Unavailable</p>
+              )}
+            </div>
+          </>
+        )}
       </article>
 
       {isDetailOpen && (

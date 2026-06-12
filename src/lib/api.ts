@@ -1,5 +1,5 @@
 // API service for apps/menu to communicate with services/api-mobile.
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api-mobile.sagansa.id/api';
 
 export class ApiError extends Error {
   status: number;

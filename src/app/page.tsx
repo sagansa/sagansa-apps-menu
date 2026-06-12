@@ -6,6 +6,7 @@ import { MenuPage } from '@/components/MenuPage';
 import { StoreSelector } from '@/components/StoreSelector';
 import { TenantStoreInfo } from '@/types';
 import apiService from '@/lib/api';
+import { RestaurantJsonLd } from '@/components/seo/JsonLd';
 
 function LoadingScreen() {
   return (
@@ -81,7 +82,17 @@ function HomeContent() {
   }
 
   if (tenantStoreInfo) {
-    return <MenuPage tenantStoreInfo={tenantStoreInfo} />;
+    return (
+      <>
+        <RestaurantJsonLd
+          name={tenantStoreInfo.name}
+          phone={tenantStoreInfo.store.phone || tenantStoreInfo.store.no_telp || undefined}
+          latitude={tenantStoreInfo.store.latitude}
+          longitude={tenantStoreInfo.store.longitude}
+        />
+        <MenuPage tenantStoreInfo={tenantStoreInfo} />
+      </>
+    );
   }
 
   // If no info and not loading, show selection

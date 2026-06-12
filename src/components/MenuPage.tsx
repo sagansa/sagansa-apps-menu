@@ -12,7 +12,7 @@ import {
   normalizePhone,
 } from '@/lib/orderHistory';
 import { resolveImageUrl } from '@/lib/images';
-import { Share2, Check, Copy, ShoppingCart, UserRound, MapPin, MessageCircle } from 'lucide-react';
+import { Share2, Check, Copy, ShoppingCart, UserRound, MapPin, MessageCircle, LayoutGrid, List } from 'lucide-react';
 
 interface MenuPageProps {
   tenantStoreInfo: TenantStoreInfo;
@@ -184,6 +184,8 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | LocalOrderHistoryItem | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Fetch real products data
   useEffect(() => {
@@ -334,6 +336,10 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
   const isViewOnly = tenantStoreInfo.store.tableCode === 'VIEW';
   const mapsUrl = buildGoogleMapsUrl(tenantStoreInfo.store.latitude, tenantStoreInfo.store.longitude);
   const whatsappUrl = buildWhatsAppUrl(tenantStoreInfo.store.phone || tenantStoreInfo.store.no_telp);
+  const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean) as string[]));
+  const filteredProducts = selectedCategory
+    ? products.filter(p => p.category === selectedCategory)
+    : products;
   const cartTotal = cart.reduce((total, item) => total + item.totalPrice, 0);
   const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
 
@@ -509,12 +515,66 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
       <main className="max-w-7xl mx-auto px-4 py-6 pb-24 sm:px-6 lg:px-8 md:pb-6">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Menu</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
-              {products.map(product => (
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Menu</h2>
+              <div className="flex rounded-lg border border-gray-200 bg-gray-100 p-0.5 md:hidden">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`rounded-md p-1.5 transition-colors ${
+                    viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  aria-label="Grid view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`rounded-md p-1.5 transition-colors ${
+                    viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  aria-label="List view"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {categories.length > 1 && (
+              <div className="mb-6 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    selectedCategory === null
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Semua
+                </button>
+                {categories.map(category => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
+                    className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                      selectedCategory === category
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className={
+              viewMode === 'list'
+                ? 'flex flex-col gap-2'
+                : 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5'
+            }>
+              {filteredProducts.map(product => (
                 <ProductCard 
                   key={product.id} 
-                  product={product} 
+                  product={product}
+                  viewMode={viewMode}
                   onAddToCart={isViewOnly ? undefined : addToCart} 
                 />
               ))}
