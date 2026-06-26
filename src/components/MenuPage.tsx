@@ -188,6 +188,12 @@ function buildWhatsAppUrl(phone?: string | null): string | null {
   return normalizedPhone ? `https://wa.me/${normalizedPhone}` : null;
 }
 
+function getInitials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const initials = words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join('');
+  return initials || 'S';
+}
+
 function sortProductsByName(products: Product[]) {
   return [...products].sort((a, b) =>
     a.name.localeCompare(b.name, 'id', { sensitivity: 'base' })
@@ -408,7 +414,9 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
 
   const isViewOnly = tenantStoreInfo.store.tableCode === 'VIEW';
   const mapsUrl = buildGoogleMapsUrl(tenantStoreInfo.store.latitude, tenantStoreInfo.store.longitude);
-  const whatsappUrl = buildWhatsAppUrl(tenantStoreInfo.store.phone || tenantStoreInfo.store.no_telp);
+  const storePhone = tenantStoreInfo.store.phone || tenantStoreInfo.store.no_telp;
+  const whatsappUrl = buildWhatsAppUrl(storePhone);
+  const storeLogoUrl = resolveImageUrl(tenantStoreInfo.store.emailReceiptLogo);
   const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean) as string[]));
   const filteredProducts = selectedCategory
     ? products.filter(p => p.category === selectedCategory)
@@ -516,14 +524,32 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{tenantStoreInfo.store.name}</h1>
-            <p className="text-sm text-gray-500">
-              {tenantStoreInfo.store.orderType === 'takeaway'
-                ? 'Takeaway / Non-online'
-                : `Table: ${tenantStoreInfo.store.tableCode}`}
-            </p>
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {storeLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={storeLogoUrl}
+                alt={`${tenantStoreInfo.store.name} logo`}
+                className="h-12 w-12 shrink-0 rounded-lg border border-gray-100 object-contain p-0.5 sm:h-14 sm:w-14"
+              />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-base font-bold text-white sm:h-14 sm:w-14">
+                {getInitials(tenantStoreInfo.store.name)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">{tenantStoreInfo.store.name}</h1>
+              {tenantStoreInfo.store.receiptHeader ? (
+                <p className="truncate text-sm text-gray-600">{tenantStoreInfo.store.receiptHeader}</p>
+              ) : (
+                <p className="truncate text-sm text-gray-500">
+                  {tenantStoreInfo.store.orderType === 'takeaway'
+                    ? 'Takeaway / Non-online'
+                    : `Table: ${tenantStoreInfo.store.tableCode}`}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             {mapsUrl && (

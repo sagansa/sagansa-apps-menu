@@ -62,6 +62,9 @@ function HomeContent() {
             longitude: storeRes.longitude,
             tableCode: tableCode,
             orderType,
+            emailReceiptLogo: storeRes.email_receipt_logo ?? null,
+            receiptHeader: storeRes.receipt_header ?? null,
+            address: storeRes.address ?? null,
           }
         };
 

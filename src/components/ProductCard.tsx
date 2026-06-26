@@ -81,6 +81,10 @@ export function ProductCard({ product, onAddToCart, viewMode = 'grid' }: Product
   const hasOptions = Boolean(product.variants?.length || product.modifications?.length);
   const variantRequired = Boolean(product.variants?.length);
   const isBundle = product.type === 'bundle';
+  // Quick-add (the inline + button) is only safe for plain single products:
+  // no variants, no add-ons, and not a bundle (bundles should open the detail
+  // modal so the customer sees the components first).
+  const isQuickAddable = !isBundle && !hasOptions;
   const imageSrc = resolveImageUrl(product.image);
   const hasImage = Boolean(imageSrc && !imageFailed);
   const stockLabel = getStockLabel(product);
@@ -161,8 +165,8 @@ export function ProductCard({ product, onAddToCart, viewMode = 'grid' }: Product
           isOutOfStock ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md'
         }`}
       >
-        {/* Media */}
-        <div className={`relative ${viewMode === 'list' ? 'aspect-square' : 'aspect-[4/3]'}`}>
+        {/* Media — always 1:1 for consistency, image or placeholder alike */}
+        <div className="relative aspect-square">
           {hasImage ? (
             <img
               src={imageSrc}
@@ -184,8 +188,8 @@ export function ProductCard({ product, onAddToCart, viewMode = 'grid' }: Product
             </span>
           )}
 
-          {/* Quick add button (inline on card, only for products without options) */}
-          {!isOutOfStock && onAddToCart && !hasOptions && (
+          {/* Quick add button (inline on card, only for plain single products) */}
+          {!isOutOfStock && onAddToCart && isQuickAddable && (
             <button
               type="button"
               onClick={(event) => {

@@ -62,6 +62,9 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
         longitude: store.longitude,
         tableCode: 'TAKEAWAY',
         orderType: 'takeaway',
+        emailReceiptLogo: store.email_receipt_logo ?? null,
+        receiptHeader: store.receipt_header ?? null,
+        address: store.address ?? null,
       }
     };
     onSelect(info);

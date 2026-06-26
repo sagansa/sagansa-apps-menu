@@ -11,6 +11,9 @@ export interface TenantStoreInfo {
     longitude?: number | string | null;
     tableCode: string;
     orderType?: 'dine-in' | 'takeaway';
+    emailReceiptLogo?: string | null;
+    receiptHeader?: string | null;
+    address?: string | null;
   };
 }
 
