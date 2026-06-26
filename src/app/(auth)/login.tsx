@@ -58,7 +58,7 @@ export default function LoginPage() {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="you@business.com"
               />
             </div>
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="••••••••"
               />
             </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
               className={`w-full py-2 px-4 rounded-md text-white font-medium ${
                 status === 'submitting'
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-brand-600 hover:bg-brand-700'
               }`}
             >
               {status === 'submitting' ? 'Logging in...' : 'Login'}
@@ -93,7 +93,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Belum punya akun?{' '}
-              <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+              <a href="/register" className="font-medium text-brand-600 hover:text-brand-500">
                 Daftar
               </a>
             </p>

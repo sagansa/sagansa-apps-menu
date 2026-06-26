@@ -75,7 +75,7 @@ export function OrderConfirmation({ order, onNewOrder }: OrderConfirmationProps)
           <div className="mt-6">
             <button
               onClick={onNewOrder}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors"
+              className="w-full bg-brand-600 text-white py-3 px-4 rounded-md font-medium hover:bg-brand-700 transition-colors"
             >
               Place Another Order
             </button>

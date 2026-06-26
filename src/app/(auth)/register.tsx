@@ -72,7 +72,7 @@ export default function RegisterPage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="Nama lengkap Anda"
               />
             </div>
@@ -86,7 +86,7 @@ export default function RegisterPage() {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="you@business.com"
               />
             </div>
@@ -100,7 +100,7 @@ export default function RegisterPage() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="••••••••"
               />
             </div>
@@ -114,7 +114,7 @@ export default function RegisterPage() {
                 id="password-confirmation"
                 value={passwordConfirmation}
                 onChange={(e) => setPasswordConfirmation(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="••••••••"
               />
             </div>
@@ -128,7 +128,7 @@ export default function RegisterPage() {
                 id="tenant-name"
                 value={tenantName}
                 onChange={(e) => setTenantName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="Nama bisnis Anda"
               />
             </div>
@@ -139,7 +139,7 @@ export default function RegisterPage() {
               className={`w-full py-2 px-4 rounded-md text-white font-medium ${
                 status === 'submitting'
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-brand-600 hover:bg-brand-700'
               }`}
             >
               {status === 'submitting' ? 'Mendaftar...' : 'Daftar'}
@@ -149,7 +149,7 @@ export default function RegisterPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Sudah punya akun?{' '}
-              <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              <a href="/login" className="font-medium text-brand-600 hover:text-brand-500">
                 Masuk
               </a>
             </p>

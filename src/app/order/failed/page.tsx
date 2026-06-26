@@ -23,7 +23,7 @@ function OrderFailedContent() {
         <div className="mt-6 grid gap-2">
           <Link
             href={returnUrl}
-            className="rounded-md bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
+            className="rounded-md bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700"
           >
             Coba Lagi
           </Link>

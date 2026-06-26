@@ -15,6 +15,10 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
+function getMaxStock(product: Product): number | undefined {
+  return product.remaining === false ? undefined : product.stock;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -38,6 +42,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (product: Product, variantId?: string, modifications: { id: string; quantity: number }[] = []) => {
     setCart(prevCart => {
+      if (!product.isAvailable) {
+        return prevCart;
+      }
+
+      const maxStock = getMaxStock(product);
+
+      if (maxStock !== undefined && maxStock < 1) {
+        return prevCart;
+      }
+
       // Check if item already exists in cart
       const existingItemIndex = prevCart.findIndex(
         item => 
@@ -51,11 +65,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // Update quantity if item exists
         const newCart = [...prevCart];
         const existingItem = newCart[existingItemIndex];
+        if (maxStock !== undefined && existingItem.quantity >= maxStock) {
+          return prevCart;
+        }
+
         const newQuantity = existingItem.quantity + 1;
         const newTotalPrice = existingItem.unitPrice * newQuantity;
         newCart[existingItemIndex] = {
           ...existingItem,
           quantity: newQuantity,
+          maxStock,
           totalPrice: newTotalPrice
         };
         return newCart;
@@ -88,6 +107,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           basePrice,
           variantPriceAdjustment,
           quantity: 1,
+          maxStock,
           unitPrice: unitPrice,
           totalPrice: totalPrice,
           modifications: modificationDetails
@@ -107,8 +127,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart(prevCart => 
       prevCart.map(item => {
         if (item.id === itemId) {
-          const newTotalPrice = item.unitPrice * newQuantity;
-          return { ...item, quantity: newQuantity, totalPrice: newTotalPrice };
+          const limitedQuantity = item.maxStock !== undefined
+            ? Math.min(newQuantity, item.maxStock)
+            : newQuantity;
+          const newTotalPrice = item.unitPrice * limitedQuantity;
+          return { ...item, quantity: limitedQuantity, totalPrice: newTotalPrice };
         }
         return item;
       })

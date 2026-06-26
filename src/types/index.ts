@@ -22,6 +22,7 @@ export interface Product {
   price: number;
   image?: string;
   isAvailable: boolean;
+  remaining?: boolean;
   category?: string;
   stock?: number;
   bundleItems?: ProductBundleItem[];
@@ -38,6 +39,9 @@ export interface ProductBundleItem {
     name: string;
     price?: number;
     stock?: number;
+    remaining?: boolean;
+    isAvailable?: boolean;
+    isActive?: boolean;
   } | null;
 }
 
@@ -54,6 +58,15 @@ export interface ProductModification {
   price: number;
   isAvailable: boolean;
   maxQuantity?: number;
+  linkedProductId?: string | null;
+  linkedProductQuantity?: number | null;
+  linkedProduct?: {
+    id: string;
+    name: string;
+    price?: number;
+    stock?: number;
+    isActive?: boolean;
+  } | null;
 }
 
 export interface PublicPaymentMethod {
@@ -75,6 +88,7 @@ export interface CartItem {
   basePrice?: number;
   variantPriceAdjustment?: number;
   quantity: number;
+  maxStock?: number;
   unitPrice: number;
   totalPrice: number;
   modifications: CartItemModification[];

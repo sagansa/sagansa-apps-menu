@@ -40,7 +40,7 @@ export const Cart = ({ items, onUpdateQuantity, onRemoveItem, onCheckout, total 
         <h2 className="text-lg font-semibold">Your Cart</h2>
         <button 
           onClick={() => setShowFullCart(!showFullCart)}
-          className="text-blue-600 text-sm"
+          className="text-brand-600 text-sm"
         >
           {showFullCart ? 'Minimize' : 'Expand'}
         </button>
@@ -124,7 +124,7 @@ export const Cart = ({ items, onUpdateQuantity, onRemoveItem, onCheckout, total 
         </div>
         <button
           onClick={onCheckout}
-          className="w-full mt-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700"
+          className="w-full mt-4 py-2 bg-brand-600 text-white rounded-md font-medium hover:bg-brand-700"
         >
           Checkout
         </button>

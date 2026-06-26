@@ -16,7 +16,7 @@ const getPaymentStatus = (status: string, payment: string) => {
   if (payment.toLowerCase() === 'bayar di kasir') {
     return {
       label: 'Pending',
-      className: 'bg-blue-100 text-blue-700',
+      className: 'bg-brand-100 text-brand-700',
     };
   }
 
@@ -67,7 +67,7 @@ function OrderSuccessContent() {
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-gray-500">Status Pesanan</span>
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+            <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
               Berhasil dikirim
             </span>
           </div>
@@ -80,7 +80,7 @@ function OrderSuccessContent() {
         <div className="mt-6 grid gap-2">
           <Link
             href={returnUrl}
-            className="rounded-md bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
+            className="rounded-md bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700"
           >
             Kembali ke Menu
           </Link>

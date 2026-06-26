@@ -40,7 +40,7 @@ export default function TestApiPage() {
         
         {loading && (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-500"></div>
           </div>
         )}
         
@@ -65,7 +65,7 @@ export default function TestApiPage() {
           onClick={testApiConnection}
           disabled={loading}
           className={`w-full py-2 px-4 rounded-md text-white font-medium ${
-            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700'
           }`}
         >
           {loading ? 'Testing...' : 'Test API Connection'}

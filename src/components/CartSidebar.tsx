@@ -475,12 +475,16 @@ export function CartSidebar({
                       </span>
                       <button
                         onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-r text-gray-600"
+                        disabled={item.maxStock !== undefined && item.quantity >= item.maxStock}
+                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-r text-gray-600 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-300"
                       >
                         +
                       </button>
                     </div>
                     <div className="text-right">
+                      {item.maxStock !== undefined && (
+                        <div className="text-xs text-gray-500">Stok: {item.maxStock}</div>
+                      )}
                       <div className="text-xs text-gray-500">{formatCurrency(item.unitPrice)} / item</div>
                       <span className="font-medium">{formatCurrency(item.totalPrice)}</span>
                     </div>
@@ -521,8 +525,8 @@ export function CartSidebar({
                     onClick={() => setPaymentMethod(option.id)}
                     className={`rounded-md border px-3 py-3 text-left font-medium transition-colors ${
                       paymentMethod === option.id
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-700 hover:border-blue-200 hover:bg-blue-50/50'
+                        ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 text-gray-700 hover:border-brand-200 hover:bg-brand-50/50'
                     }`}
                   >
                     {option.label}
@@ -557,7 +561,7 @@ export function CartSidebar({
               className={`w-full mt-6 py-3 px-4 rounded-md text-white font-medium ${
                 isSubmitting || cart.length === 0
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-brand-600 hover:bg-brand-700'
               }`}
             >
               {isSubmitting ? 'Submitting...' : 'Place Order'}
@@ -596,7 +600,7 @@ export function CartSidebar({
                   id="modal-customer-name"
                   value={customerInfo.name}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                  className={`w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="Your name"
                 />
                 {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name}</p>}
@@ -611,7 +615,7 @@ export function CartSidebar({
                   id="modal-customer-phone"
                   value={customerInfo.phoneNumber}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, phoneNumber: e.target.value })}
-                  className={`w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="+62 812 3456 7890"
                 />
                 {errors.phoneNumber && <p className="mt-1 text-xs text-red-600">{errors.phoneNumber}</p>}
@@ -626,7 +630,7 @@ export function CartSidebar({
                   id="modal-customer-email"
                   value={customerInfo.email}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="your@email.com"
                 />
               </div>
@@ -636,7 +640,7 @@ export function CartSidebar({
                 onClick={handleCustomerModalSubmit}
                 disabled={isSubmitting}
                 className={`w-full rounded-md px-4 py-3 font-semibold text-white ${
-                  isSubmitting ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+                  isSubmitting ? 'cursor-not-allowed bg-gray-400' : 'bg-brand-600 hover:bg-brand-700'
                 }`}
               >
                 {isSubmitting ? 'Submitting...' : 'Simpan & Lanjutkan'}
@@ -720,7 +724,7 @@ export function CartSidebar({
               <button
                 type="button"
                 onClick={handleCompleteQrisPayment}
-                className="mt-5 w-full rounded-md bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
+                className="mt-5 w-full rounded-md bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700"
               >
                 Pesanan Berhasil Dikirim
               </button>

@@ -189,7 +189,7 @@ export const CheckoutModal = ({ isOpen, onClose, cart, total, tenantStoreInfo, o
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700"
               >
                 Place Order
               </button>

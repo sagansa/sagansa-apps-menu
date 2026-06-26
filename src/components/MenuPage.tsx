@@ -23,6 +23,15 @@ function toNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function toOptionalNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function normalizePublicProduct(product: any): Product {
   const basePrice = toNumber(product.price);
   const productType = product.type === 'bundle' ? 'bundle' : 'single';
@@ -31,8 +40,12 @@ function normalizePublicProduct(product: any): Product {
     ? product.bundle_items
     : (Array.isArray(product.bundleItems) ? product.bundleItems : []);
   const stock = productType === 'bundle' && bundleStock !== null && bundleStock !== undefined
-    ? toNumber(bundleStock)
-    : toNumber(product.stock);
+    ? toOptionalNumber(bundleStock)
+    : toOptionalNumber(product.stock ?? product.stock_quantity ?? product.stockQuantity);
+  const isAvailable = product.isAvailable ?? product.is_available ?? (
+    product.is_active !== false &&
+    (product.remaining !== true || stock === undefined || stock > 0)
+  );
   const variantsFromGroups = Array.isArray(product.variant_groups)
     ? product.variant_groups.flatMap((group: any) =>
         Array.isArray(group.variants)
@@ -68,13 +81,11 @@ function normalizePublicProduct(product: any): Product {
     price: basePrice,
     image: resolveImageUrl(product.image_url ?? product.imageUrl ?? product.image),
     stock,
+    remaining: product.remaining,
     category: typeof product.category === 'string'
       ? product.category
       : product.category_detail?.name,
-    isAvailable: product.isAvailable ?? (
-      product.is_active !== false &&
-      (product.remaining === false || stock > 0)
-    ),
+    isAvailable,
     bundleItems: rawBundleItems
       .map((item: any) => {
         const componentProduct = item.component_product ?? item.componentProduct;
@@ -89,6 +100,9 @@ function normalizePublicProduct(product: any): Product {
                 name: String(componentProduct.name),
                 price: toNumber(componentProduct.price),
                 stock: toNumber(componentProduct.stock),
+                remaining: componentProduct.remaining ?? undefined,
+                isAvailable: componentProduct.is_available ?? componentProduct.isAvailable,
+                isActive: componentProduct.is_active ?? componentProduct.isActive,
               }
             : null,
         };
@@ -97,13 +111,40 @@ function normalizePublicProduct(product: any): Product {
     modifications: Array.isArray(product.modifications)
       ? product.modifications
           .filter((modification: any) => modification.is_active !== false)
-          .map((modification: any) => ({
-            id: String(modification.id),
-            name: String(modification.name),
-            price: toNumber(modification.price),
-            isAvailable: modification.isAvailable ?? modification.is_active !== false,
-            maxQuantity: modification.max_quantity,
-          }))
+          .map((modification: any) => {
+            const linkedProduct = modification.linked_product ?? modification.linkedProduct;
+
+            return {
+              id: String(modification.id),
+              name: String(modification.name),
+              price: toNumber(modification.price),
+              isAvailable: modification.isAvailable ?? (
+                modification.is_active !== false &&
+                (
+                  !linkedProduct ||
+                  linkedProduct.stock == null ||
+                  toNumber(linkedProduct.stock) >= toNumber(
+                    modification.linked_product_quantity ?? modification.linkedProductQuantity,
+                    1,
+                  )
+                )
+              ),
+              maxQuantity: modification.max_quantity,
+              linkedProductId: modification.linked_product_id ?? modification.linkedProductId ?? null,
+              linkedProductQuantity: modification.linked_product_quantity != null
+                ? toNumber(modification.linked_product_quantity)
+                : (modification.linkedProductQuantity != null ? toNumber(modification.linkedProductQuantity) : null),
+              linkedProduct: linkedProduct
+                ? {
+                  id: String(linkedProduct.id),
+                  name: String(linkedProduct.name),
+                  price: linkedProduct.price != null ? toNumber(linkedProduct.price) : undefined,
+                  stock: linkedProduct.stock != null ? toNumber(linkedProduct.stock) : undefined,
+                  isActive: linkedProduct.is_active ?? linkedProduct.isActive,
+                }
+                : null,
+            };
+          })
       : [],
   };
 }
@@ -153,6 +194,10 @@ function sortProductsByName(products: Product[]) {
   );
 }
 
+function getMaxStock(product: Product): number | undefined {
+  return product.remaining === false ? undefined : product.stock;
+}
+
 function normalizePublicPaymentMethods(methods: unknown): PublicPaymentMethod[] {
   if (!Array.isArray(methods)) {
     return [];
@@ -194,7 +239,16 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
       try {
         const response = await apiService.getPublicProducts(tenantStoreInfo.store.id);
         if (response.success) {
-          setProducts(sortProductsByName(response.data.map(normalizePublicProduct)));
+          // Stock / remaining / isAvailable are already computed server-side by
+          // /public/products (merged with the active POS shift). Unlike
+          // mobiles/point-of-sale (an authenticated staff app that fetches
+          // /pos/shifts/active separately and merges client-side), this is a
+          // guest customer app without an auth token, so it cannot reach the
+          // auth-guarded shift endpoint. Trust the server-computed values
+          // directly — otherwise a failed shift fetch would force remaining:false
+          // on every product and hide the stock label.
+          const normalized = response.data.map(normalizePublicProduct);
+          setProducts(sortProductsByName(normalized));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products');
@@ -248,6 +302,16 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
 
   const addToCart = (product: Product, variantId?: string, modifications: { id: string; quantity: number }[] = []) => {
     setCart(prevCart => {
+      if (!product.isAvailable) {
+        return prevCart;
+      }
+
+      const maxStock = getMaxStock(product);
+
+      if (maxStock !== undefined && maxStock < 1) {
+        return prevCart;
+      }
+
       // Check if item already exists in cart
       const existingItemIndex = prevCart.findIndex(
         item => 
@@ -261,11 +325,16 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
         // Update quantity if item exists
         const newCart = [...prevCart];
         const existingItem = newCart[existingItemIndex];
+        if (maxStock !== undefined && existingItem.quantity >= maxStock) {
+          return prevCart;
+        }
+
         const newQuantity = existingItem.quantity + 1;
         const newTotalPrice = existingItem.unitPrice * newQuantity;
         newCart[existingItemIndex] = {
           ...existingItem,
           quantity: newQuantity,
+          maxStock,
           totalPrice: newTotalPrice
         };
         return newCart;
@@ -298,6 +367,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
           basePrice,
           variantPriceAdjustment,
           quantity: 1,
+          maxStock,
           unitPrice,
           totalPrice: totalPrice,
           modifications: modificationDetails
@@ -317,8 +387,11 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
     setCart(prevCart => 
       prevCart.map(item => {
         if (item.id === itemId) {
-          const newTotalPrice = item.unitPrice * newQuantity;
-          return { ...item, quantity: newQuantity, totalPrice: newTotalPrice };
+          const limitedQuantity = item.maxStock !== undefined
+            ? Math.min(newQuantity, item.maxStock)
+            : newQuantity;
+          const newTotalPrice = item.unitPrice * limitedQuantity;
+          return { ...item, quantity: limitedQuantity, totalPrice: newTotalPrice };
         }
         return item;
       })
@@ -423,7 +496,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-500"></div>
       </div>
     );
   }
@@ -458,7 +531,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+                className="p-2 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors border border-gray-200"
                 title="Buka lokasi di Google Maps"
                 aria-label="Buka lokasi store di Google Maps"
               >
@@ -479,14 +552,14 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
             )}
             <button
               onClick={openHistory}
-              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+              className="p-2 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors border border-gray-200"
               title="Profile"
             >
               <UserRound className="w-5 h-5" />
             </button>
             <button 
               onClick={() => setShowShareModal(true)}
-              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+              className="p-2 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors border border-gray-200"
               title="Share Menu"
             >
               <Share2 className="w-5 h-5" />
@@ -495,7 +568,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
               <div className="relative">
                 <button 
                   onClick={() => setIsCartOpen(true)}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600 text-white transition-colors hover:bg-brand-700"
                   aria-label="Open cart"
                 >
                   <ShoppingCart className="h-5 w-5" />
@@ -521,7 +594,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`rounded-md p-1.5 transition-colors ${
-                    viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    viewMode === 'grid' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
                   aria-label="Grid view"
                 >
@@ -530,7 +603,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                 <button
                   onClick={() => setViewMode('list')}
                   className={`rounded-md p-1.5 transition-colors ${
-                    viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    viewMode === 'list' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
                   aria-label="List view"
                 >
@@ -544,7 +617,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                   onClick={() => setSelectedCategory(null)}
                   className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                     selectedCategory === null
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-brand-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -556,7 +629,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                     onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
                     className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                       selectedCategory === category
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-brand-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -601,7 +674,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
         <div className="fixed inset-x-4 bottom-4 z-40 md:hidden">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white shadow-lg shadow-blue-600/20"
+            className="flex w-full items-center justify-center rounded-lg bg-brand-600 px-4 py-3 font-semibold text-white shadow-lg shadow-brand-600/20"
           >
             <ShoppingCart className="mr-2 h-5 w-5" />
             <span>{cartItemCount} item · Rp {cartTotal.toLocaleString('id-ID')}</span>
@@ -699,7 +772,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                       key={`server-${order.id}`}
                       type="button"
                       onClick={() => setSelectedOrder(order)}
-                      className="w-full rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/40"
+                      className="w-full rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-brand-200 hover:bg-brand-50/40"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -717,7 +790,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                       key={`local-${order.id}`}
                       type="button"
                       onClick={() => setSelectedOrder(order)}
-                      className="w-full rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/40"
+                      className="w-full rounded-lg border border-gray-200 p-4 text-left transition-colors hover:border-brand-200 hover:bg-brand-50/40"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -746,7 +819,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                 Untuk tracking lintas device, login atau daftar akun customer. Saat endpoint histori login sudah aktif penuh, data tidak bergantung pada localStorage perangkat.
                 <div className="mt-3 flex gap-2">
                   <a href="/login" className="rounded-md border border-gray-200 bg-white px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Login</a>
-                  <a href="/register" className="rounded-md bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700">Daftar</a>
+                  <a href="/register" className="rounded-md bg-brand-600 px-3 py-2 font-medium text-white hover:bg-brand-700">Daftar</a>
                 </div>
               </div>
             </div>
@@ -844,7 +917,7 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
                   <span className="text-sm text-gray-500 truncate mr-2">{getShareUrl()}</span>
                   <button 
                     onClick={handleCopyLink}
-                    className="flex-shrink-0 bg-white p-2 rounded-lg border border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm"
+                    className="flex-shrink-0 bg-white p-2 rounded-lg border border-gray-200 hover:border-brand-500 hover:text-brand-600 transition-all shadow-sm"
                   >
                     {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                   </button>
