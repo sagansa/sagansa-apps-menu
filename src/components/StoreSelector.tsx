@@ -72,21 +72,21 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0A0A0A] text-white">
-        <Loader2 className="w-12 h-12 text-gold animate-spin mb-4" />
-        <p className="text-slate-400 animate-pulse">Loading amazing places...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <Loader2 className="w-12 h-12 text-brand-500 animate-spin mb-4" />
+        <p className="text-gray-500 animate-pulse">Loading amazing places...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white p-6 selection:bg-gold/30">
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
       <div className="max-w-2xl mx-auto pt-12">
         <div className="mb-12 text-center">
           <h1 className="text-4xl font-black tracking-tight uppercase mb-4">
-            Sagan<span className="text-gold">sa</span> Menu
+            Sagan<span className="text-brand-600">sa</span> Menu
           </h1>
-          <p className="text-slate-400 text-lg">
+          <p className="text-gray-500 text-lg">
             {!selectedTenant 
               ? 'Select a merchant to browse their menu' 
               : `Browsing ${selectedTenant.name}`}
@@ -95,7 +95,7 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
 
         {!selectedTenant ? (
           <div className="space-y-4">
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+            <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
               <Users className="w-4 h-4" /> Available Merchants
             </h2>
             <div className="grid gap-4">
@@ -103,21 +103,21 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
                 <button
                   key={tenant.id}
                   onClick={() => handleTenantSelect(tenant)}
-                  className="group relative bg-white/5 border border-white/10 p-6 rounded-2xl flex items-center justify-between hover:bg-white/10 hover:border-gold/50 transition-all duration-300 overflow-hidden"
+                  className="group relative bg-white border border-gray-200 p-6 rounded-2xl flex items-center justify-between hover:bg-brand-50 hover:border-brand-300 transition-all duration-300 overflow-hidden shadow-sm"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                      <Users className="w-6 h-6 text-gold" />
+                    <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                      <Users className="w-6 h-6 text-brand-600" />
                     </div>
                     <div className="text-left">
-                      <h3 className="font-bold text-xl group-hover:text-gold transition-colors">{tenant.name}</h3>
-                      <p className="text-xs text-slate-500 uppercase tracking-widest">Merchant Partner</p>
+                      <h3 className="font-bold text-xl group-hover:text-brand-700 transition-colors">{tenant.name}</h3>
+                      <p className="text-xs text-gray-400 uppercase tracking-widest">Merchant Partner</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-slate-600 group-hover:text-gold group-hover:translate-x-1 transition-all" />
+                  <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-brand-600 group-hover:translate-x-1 transition-all" />
                   
                   {/* Decorative Gradient */}
-                  <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute top-0 right-0 w-24 h-full bg-gradient-to-l from-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}
             </div>
@@ -127,18 +127,18 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
             <div className="flex items-center justify-between mb-6">
               <button 
                 onClick={() => setSelectedTenant(null)}
-                className="text-sm font-bold text-slate-500 hover:text-gold flex items-center gap-2 transition-colors"
+                className="text-sm font-bold text-gray-500 hover:text-brand-600 flex items-center gap-2 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to Merchants
               </button>
-              <h2 className="text-xs font-black uppercase tracking-widest text-gold flex items-center gap-2">
+              <h2 className="text-xs font-black uppercase tracking-widest text-brand-600 flex items-center gap-2">
                 <Store className="w-4 h-4" /> Choose Store
               </h2>
             </div>
 
             {loadingStores ? (
               <div className="py-12 flex justify-center">
-                <Loader2 className="w-8 h-8 text-gold animate-spin" />
+                <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
               </div>
             ) : (
               <div className="grid gap-4">
@@ -146,27 +146,27 @@ export function StoreSelector({ onSelect }: StoreSelectorProps) {
                   <button
                     key={store.id}
                     onClick={() => handleStoreSelect(store)}
-                    className="group relative bg-white/5 border border-white/10 p-6 rounded-2xl flex items-center justify-between hover:bg-white/10 hover:border-gold/50 transition-all duration-300 overflow-hidden text-left"
+                    className="group relative bg-white border border-gray-200 p-6 rounded-2xl flex items-center justify-between hover:bg-brand-50 hover:border-brand-300 transition-all duration-300 overflow-hidden text-left shadow-sm"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                        <Store className="w-6 h-6 text-gold" />
+                      <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                        <Store className="w-6 h-6 text-brand-600" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-xl group-hover:text-gold transition-colors">{store.name}</h3>
-                        <div className="flex items-center gap-2 text-slate-500 mt-1">
+                        <h3 className="font-bold text-xl group-hover:text-brand-700 transition-colors">{store.name}</h3>
+                        <div className="flex items-center gap-2 text-gray-400 mt-1">
                           <MapPin className="w-3 h-3" />
                           <span className="text-xs uppercase tracking-widest">{store.nickname || 'Main Branch'}</span>
                         </div>
                       </div>
                     </div>
-                    <ChevronRight className="w-6 h-6 text-slate-600 group-hover:text-gold group-hover:translate-x-1 transition-all" />
+                    <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-brand-600 group-hover:translate-x-1 transition-all" />
                   </button>
                 ))}
                 
                 {stores.length === 0 && (
-                  <div className="text-center py-12 bg-white/5 border border-white/10 rounded-2xl border-dashed">
-                    <p className="text-slate-500 italic">No active stores found for this merchant.</p>
+                  <div className="text-center py-12 bg-white border border-gray-200 rounded-2xl border-dashed">
+                    <p className="text-gray-500 italic">No active stores found for this merchant.</p>
                   </div>
                 )}
               </div>

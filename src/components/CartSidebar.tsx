@@ -21,7 +21,6 @@ interface CartSidebarProps {
   total: number;
   tenantStoreInfo: TenantStoreInfo;
   paymentMethods: PublicPaymentMethod[];
-  isOpen: boolean;
   onClose: () => void;
 }
 
@@ -33,7 +32,6 @@ export function CartSidebar({
   total, 
   tenantStoreInfo,
   paymentMethods,
-  isOpen,
   onClose
 }: CartSidebarProps) {
   const router = useRouter();

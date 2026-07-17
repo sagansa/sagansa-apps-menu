@@ -1,0 +1,116 @@
+'use client';
+
+import { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { MenuPage } from '@/components/MenuPage';
+import { StoreSelector } from '@/components/StoreSelector';
+import { TenantStoreInfo } from '@/types';
+import apiService from '@/lib/api';
+import { RestaurantJsonLd } from '@/components/seo/JsonLd';
+import { resolveImageUrl } from '@/lib/images';
+
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
+      <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-brand-500"></div>
+      <p className="animate-pulse text-gray-500">Initializing Sagansa...</p>
+    </div>
+  );
+}
+
+export function HomeContent() {
+  const searchParams = useSearchParams();
+  const [tenantStoreInfo, setTenantStoreInfo] = useState<TenantStoreInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const resolveTenantStore = async () => {
+      try {
+        // Extract tenant and store info from URL query parameters
+        const tenantId = searchParams.get('tenantId');
+        const storeId = searchParams.get('storeId');
+        const tableCode = searchParams.get('tableCode') || 'default';
+        const orderTypeParam = searchParams.get('orderType');
+        const orderType = orderTypeParam === 'takeaway' ? 'takeaway' : orderTypeParam === 'dine-in' ? 'dine-in' : undefined;
+
+        if (!tenantId || !storeId) {
+          setLoading(false);
+          return;
+        }
+
+        // Fetch real tenant and store info
+        const [tenantRes, storeRes] = await Promise.all([
+          apiService.getPublicTenants().then(res => res.data.find(t => t.id === tenantId)),
+          apiService.getPublicStores(tenantId).then(res => res.data.find(s => s.id === storeId))
+        ]);
+
+        if (!tenantRes || !storeRes) {
+          setLoading(false);
+          return;
+        }
+
+        const realTenantStoreInfo: TenantStoreInfo = {
+          id: tenantId,
+          name: tenantRes.name,
+          store: {
+            id: storeId,
+            name: storeRes.name,
+            nickname: storeRes.nickname,
+            phone: storeRes.phone,
+            no_telp: storeRes.no_telp,
+            latitude: storeRes.latitude,
+            longitude: storeRes.longitude,
+            tableCode: tableCode,
+            orderType,
+            emailReceiptLogo: storeRes.email_receipt_logo ?? null,
+            receiptHeader: storeRes.receipt_header ?? null,
+            address: storeRes.address ?? null,
+          }
+        };
+
+        setTenantStoreInfo(realTenantStoreInfo);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error resolving tenant/store');
+        console.error('Error resolving tenant/store:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    resolveTenantStore();
+  }, [searchParams]);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (tenantStoreInfo) {
+    return (
+      <>
+        <RestaurantJsonLd
+          name={tenantStoreInfo.name}
+          phone={tenantStoreInfo.store.phone || tenantStoreInfo.store.no_telp || undefined}
+          latitude={tenantStoreInfo.store.latitude}
+          longitude={tenantStoreInfo.store.longitude}
+          url={`${typeof window !== 'undefined' ? window.location.origin : ''}${typeof window !== 'undefined' ? window.location.pathname : ''}?tenantId=${tenantStoreInfo.id}&storeId=${tenantStoreInfo.store.id}`}
+          image={resolveImageUrl(tenantStoreInfo.store.emailReceiptLogo) || undefined}
+        />
+        <MenuPage tenantStoreInfo={tenantStoreInfo} />
+      </>
+    );
+  }
+
+  // If no info and not loading, show selection
+  return (
+    <StoreSelector onSelect={(info) => setTenantStoreInfo(info)} />
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <HomeContent />
+    </Suspense>
+  );
+}

@@ -1,113 +1,98 @@
-'use client';
-
-import { Suspense, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { MenuPage } from '@/components/MenuPage';
-import { StoreSelector } from '@/components/StoreSelector';
-import { TenantStoreInfo } from '@/types';
+import type { Metadata } from 'next';
+import { HomeContent } from '@/components/HomeContent';
 import apiService from '@/lib/api';
-import { RestaurantJsonLd } from '@/components/seo/JsonLd';
+import { resolveImageUrl } from '@/lib/images';
 
-function LoadingScreen() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0A0A0A]">
-      <div className="mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-gold"></div>
-      <p className="animate-pulse text-slate-400">Initializing Sagansa...</p>
-    </div>
-  );
+export const dynamic = 'force-dynamic';
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://menu.sagansa.id';
+const SITE_NAME = 'Web Order by Sagansa';
+
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+function firstValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
 }
 
-function HomeContent() {
-  const searchParams = useSearchParams();
-  const [tenantStoreInfo, setTenantStoreInfo] = useState<TenantStoreInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+async function resolveStoreInfo(params: { [key: string]: string | string[] | undefined }) {
+  const tenantId = firstValue(params.tenantId);
+  const storeId = firstValue(params.storeId);
 
-  useEffect(() => {
-    const resolveTenantStore = async () => {
-      try {
-        // Extract tenant and store info from URL query parameters
-        const tenantId = searchParams.get('tenantId');
-        const storeId = searchParams.get('storeId');
-        const tableCode = searchParams.get('tableCode') || 'default';
-        const orderTypeParam = searchParams.get('orderType');
-        const orderType = orderTypeParam === 'takeaway' ? 'takeaway' : orderTypeParam === 'dine-in' ? 'dine-in' : undefined;
-        
-        if (!tenantId || !storeId) {
-          setLoading(false);
-          return;
-        }
+  if (!tenantId || !storeId) {
+    return null;
+  }
 
-        // Fetch real tenant and store info
-        const [tenantRes, storeRes] = await Promise.all([
-          apiService.getPublicTenants().then(res => res.data.find(t => t.id === tenantId)),
-          apiService.getPublicStores(tenantId).then(res => res.data.find(s => s.id === storeId))
-        ]);
+  try {
+    const [tenantRes, storeRes] = await Promise.all([
+      apiService.getPublicTenants().then(res => res.data.find(t => t.id === tenantId)),
+      apiService.getPublicStores(tenantId).then(res => res.data.find(s => s.id === storeId)),
+    ]);
 
-        if (!tenantRes || !storeRes) {
-          setLoading(false);
-          return;
-        }
+    if (!tenantRes || !storeRes) {
+      return null;
+    }
 
-        const realTenantStoreInfo: TenantStoreInfo = {
-          id: tenantId,
-          name: tenantRes.name,
-          store: {
-            id: storeId,
-            name: storeRes.name,
-            nickname: storeRes.nickname,
-            phone: storeRes.phone,
-            no_telp: storeRes.no_telp,
-            latitude: storeRes.latitude,
-            longitude: storeRes.longitude,
-            tableCode: tableCode,
-            orderType,
-            emailReceiptLogo: storeRes.email_receipt_logo ?? null,
-            receiptHeader: storeRes.receipt_header ?? null,
-            address: storeRes.address ?? null,
-          }
-        };
-
-        setTenantStoreInfo(realTenantStoreInfo);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error resolving tenant/store');
-        console.error('Error resolving tenant/store:', err);
-      } finally {
-        setLoading(false);
-      }
+    return {
+      tenantName: tenantRes.name as string,
+      storeName: storeRes.name as string,
+      nickname: (storeRes.nickname as string) || undefined,
+      logo: (storeRes.email_receipt_logo as string) || null,
     };
-
-    resolveTenantStore();
-  }, [searchParams]);
-
-  if (loading) {
-    return <LoadingScreen />;
+  } catch {
+    return null;
   }
-
-  if (tenantStoreInfo) {
-    return (
-      <>
-        <RestaurantJsonLd
-          name={tenantStoreInfo.name}
-          phone={tenantStoreInfo.store.phone || tenantStoreInfo.store.no_telp || undefined}
-          latitude={tenantStoreInfo.store.latitude}
-          longitude={tenantStoreInfo.store.longitude}
-        />
-        <MenuPage tenantStoreInfo={tenantStoreInfo} />
-      </>
-    );
-  }
-
-  // If no info and not loading, show selection
-  return (
-    <StoreSelector onSelect={(info) => setTenantStoreInfo(info)} />
-  );
 }
 
-export default function Home() {
-  return (
-    <Suspense fallback={<LoadingScreen />}>
-      <HomeContent />
-    </Suspense>
-  );
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const tenantId = firstValue(params.tenantId);
+  const storeId = firstValue(params.storeId);
+  const storeInfo = await resolveStoreInfo(params);
+
+  if (!storeInfo) {
+    return {
+      title: SITE_NAME,
+      description:
+        'Pesan menu makanan & minuman langsung dari HP kamu. Sistem pemesanan online untuk restoran, kafe, dan bisnis F&B yang terhubung dengan SAGANSA.',
+    };
+  }
+
+  const storeTitle = `${storeInfo.storeName} — ${SITE_NAME}`;
+  const storeDescription = storeInfo.nickname
+    ? `Lihat dan pesan menu dari ${storeInfo.storeName} (${storeInfo.nickname}). Pemesanan online cepat & mudah melalui ${SITE_NAME}.`
+    : `Lihat dan pesan menu dari ${storeInfo.storeName}. Pemesanan online cepat & mudah melalui ${SITE_NAME}.`;
+
+  const logoUrl = storeInfo.logo ? resolveImageUrl(storeInfo.logo) : null;
+  const canonicalUrl = `${SITE_URL}/?tenantId=${tenantId}&storeId=${storeId}`;
+
+  return {
+    title: storeTitle,
+    description: storeDescription,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: storeTitle,
+      description: storeDescription,
+      url: canonicalUrl,
+      siteName: SITE_NAME,
+      ...(logoUrl ? { images: [{ url: logoUrl }] } : {}),
+    },
+    twitter: {
+      title: storeTitle,
+      description: storeDescription,
+      ...(logoUrl ? { images: [logoUrl] } : {}),
+    },
+  };
+}
+
+export default function Page() {
+  return <HomeContent />;
 }

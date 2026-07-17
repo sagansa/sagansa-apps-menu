@@ -688,7 +688,6 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
               total={cartTotal}
               tenantStoreInfo={tenantStoreInfo}
               paymentMethods={paymentMethods}
-              isOpen={isCartOpen}
               onClose={() => setIsCartOpen(false)}
             />
           </div>
@@ -722,7 +721,6 @@ export function MenuPage({ tenantStoreInfo }: MenuPageProps) {
             total={cartTotal}
             tenantStoreInfo={tenantStoreInfo}
             paymentMethods={paymentMethods}
-            isOpen={isCartOpen}
             onClose={() => setIsCartOpen(false)}
           />
         </div>

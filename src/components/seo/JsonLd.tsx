@@ -48,6 +48,7 @@ interface RestaurantJsonLdProps {
   latitude?: number | string | null;
   longitude?: number | string | null;
   url?: string;
+  image?: string | null;
 }
 
 export function RestaurantJsonLd({
@@ -57,6 +58,7 @@ export function RestaurantJsonLd({
   latitude,
   longitude,
   url,
+  image,
 }: RestaurantJsonLdProps) {
   const data: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -75,6 +77,13 @@ export function RestaurantJsonLd({
       name: "Dine-in / Takeaway",
     },
   };
+
+  if (image) {
+    data.image = image;
+    if (!data.logo) {
+      data.logo = image;
+    }
+  }
 
   if (phone) {
     data.telephone = phone;
